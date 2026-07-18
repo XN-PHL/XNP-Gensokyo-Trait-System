@@ -1,0 +1,14 @@
+{
+  "source_file_count": 114,
+  "history_file_count": 122,
+  "absolute_private_path_leak_count": 0,
+  "email_leak_count": 0,
+  "steam_login_file_reference_count": 0,
+  "raw_console_file_count": 0,
+  "binary_asset_count": 0,
+  "removed_console_like_history_files": [
+    "history/development-evidence/versions/0.5.60.6.4/console_34_XNP_ONLY.txt",
+    "history/development-evidence/versions/0.5.60.6.7/console_36_XNP_ONLY.txt",
+    "history/development-evidence/versions/0.5.60.6.8/console_37_XNP_SANITIZED.txt"
+  ]
+}
