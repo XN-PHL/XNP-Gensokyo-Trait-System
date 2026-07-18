@@ -1,0 +1,6 @@
+version=0.5.60.7.5
+id=3762431102
+title=XNP 幻想乡特质系统｜Gensokyo Trait System [B42] 0.5.60.7.5 Runtime Test
+tags=Build 42,Gameplay,Traits,Sandbox
+visibility=public
+author=世界第一小脑 / XN-PHL

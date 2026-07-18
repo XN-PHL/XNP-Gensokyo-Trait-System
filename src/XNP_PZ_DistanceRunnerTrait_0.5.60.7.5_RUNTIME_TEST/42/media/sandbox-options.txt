@@ -1,0 +1,1745 @@
+VERSION = 1,
+
+option XNPDistanceRunner.EnableMod
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableMod,
+}
+
+option XNPDistanceRunner.TuningPreset
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_TuningPreset,
+    valueTranslation = XNPDistanceRunner_TuningPreset,
+}
+
+option XNPDistanceRunner.EnableDebugSummary
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableDebugSummary,
+}
+
+option XNPDistanceRunner.LiveRefreshTuning
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_LiveRefreshTuning,
+}
+
+option XNPDistanceRunner.GlobalSkillCostMultiplier
+{
+    type = double, min = 0.00, max = 2.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GlobalSkillCostMultiplier,
+}
+
+option XNPDistanceRunner.ZombieImpactCostMultiplier
+{
+    type = double, min = 0.00, max = 2.00, default = 0.24,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_ZombieImpactCostMultiplier,
+}
+
+option XNPDistanceRunner.JogBumpCostMultiplier
+{
+    type = double, min = 0.00, max = 2.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_JogBumpCostMultiplier,
+}
+
+option XNPDistanceRunner.SprintPrecollisionCostMultiplier
+{
+    type = double, min = 0.00, max = 2.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_SprintPrecollisionCostMultiplier,
+}
+
+option XNPDistanceRunner.SprintVehicleZombieCostMultiplier
+{
+    type = double, min = 0.00, max = 2.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_SprintVehicleZombieCostMultiplier,
+}
+
+option XNPDistanceRunner.ControlledEscapeCostMultiplier
+{
+    type = double, min = 0.00, max = 2.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_ControlledEscapeCostMultiplier,
+}
+
+option XNPDistanceRunner.NativeTripCostMultiplier
+{
+    type = double, min = 0.00, max = 2.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_NativeTripCostMultiplier,
+}
+
+option XNPDistanceRunner.StaminaAssistIntensity
+{
+    type = double, min = 0.00, max = 2.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_StaminaAssistIntensity,
+}
+
+option XNPDistanceRunner.BlueRefundPercent
+{
+    type = integer, min = 0, max = 90, default = 30,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_BlueRefundPercent,
+}
+
+option XNPDistanceRunner.YellowRefundPercent
+{
+    type = integer, min = 0, max = 90, default = 38,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowRefundPercent,
+}
+
+option XNPDistanceRunner.RedRefundPercent
+{
+    type = integer, min = 0, max = 90, default = 55,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedRefundPercent,
+}
+
+option XNPDistanceRunner.ExtraHungerCostMultiplier
+{
+    type = double, min = 0.00, max = 3.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_ExtraHungerCostMultiplier,
+}
+
+option XNPDistanceRunner.ResourceGateEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_ResourceGateEnabled,
+}
+
+option XNPDistanceRunner.GreenExitPercent
+{
+    type = integer, min = 40, max = 95, default = 70,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenExitPercent,
+}
+
+option XNPDistanceRunner.GreenEnterPercent
+{
+    type = integer, min = 45, max = 100, default = 76,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenEnterPercent,
+}
+
+option XNPDistanceRunner.BlueLowerPercent
+{
+    type = integer, min = 10, max = 80, default = 36,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_BlueLowerPercent,
+}
+
+option XNPDistanceRunner.YellowLowerPercent
+{
+    type = integer, min = 1, max = 60, default = 14,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowLowerPercent,
+}
+
+option XNPDistanceRunner.ShowStatusIcon
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_ShowStatusIcon,
+}
+
+option XNPDistanceRunner.EnableStatusShake
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableStatusShake,
+}
+
+option XNPDistanceRunner.PerformanceMode
+{
+    type = enum, numValues = 3, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PerformanceMode,
+    valueTranslation = XNPDistanceRunner_PerformanceMode,
+}
+
+option XNPDistanceRunner.IdleThreatScanMs
+{
+    type = integer, min = 100, max = 2000, default = 500,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_IdleThreatScanMs,
+}
+
+option XNPDistanceRunner.ActiveThreatScanMs
+{
+    type = integer, min = 50, max = 1000, default = 100,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_ActiveThreatScanMs,
+}
+
+option XNPDistanceRunner.CriticalThreatScanMs
+{
+    type = integer, min = 25, max = 500, default = 50,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_CriticalThreatScanMs,
+}
+
+option XNPDistanceRunner.MaxNearbyCandidates
+{
+    type = integer, min = 4, max = 16, default = 16,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MaxNearbyCandidates,
+}
+
+option XNPDistanceRunner.EnableRuntimeDebug
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableRuntimeDebug,
+}
+
+option XNPDistanceRunner.EnableLowEnduranceFoodConversion
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableLowEnduranceFoodConversion,
+}
+
+option XNPDistanceRunner.EnableTieredFoodRecovery
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableTieredFoodRecovery,
+}
+
+option XNPDistanceRunner.FoodRecoveryPulseSeconds
+{
+    type = double, min = 0.50, max = 10.00, default = 2.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_FoodRecoveryPulseSeconds,
+}
+
+option XNPDistanceRunner.BlueFoodCostPercent
+{
+    type = double, min = 0.00, max = 10.00, default = 0.50,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_BlueFoodCostPercent,
+}
+
+option XNPDistanceRunner.BlueEnduranceGainPercent
+{
+    type = double, min = 0.01, max = 20.00, default = 1.50,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_BlueEnduranceGainPercent,
+}
+
+option XNPDistanceRunner.YellowRedFoodCostPercent
+{
+    type = double, min = 0.00, max = 10.00, default = 1.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowRedFoodCostPercent,
+}
+
+option XNPDistanceRunner.YellowRedEnduranceGainPercent
+{
+    type = double, min = 0.01, max = 20.00, default = 2.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowRedEnduranceGainPercent,
+}
+
+option XNPDistanceRunner.FoodConversionTriggerPercent
+{
+    type = integer, min = 5, max = 95, default = 30,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_FoodConversionTriggerPercent,
+}
+
+option XNPDistanceRunner.FoodConversionTargetPercent
+{
+    type = integer, min = 5, max = 95, default = 40,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_FoodConversionTargetPercent,
+}
+
+option XNPDistanceRunner.MinimumFoodReservePercent
+{
+    type = integer, min = 40, max = 95, default = 40,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MinimumFoodReservePercent,
+}
+
+option XNPDistanceRunner.FoodToEnduranceRatioPercent
+{
+    type = integer, min = 25, max = 400, default = 100,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_FoodToEnduranceRatioPercent,
+}
+
+option XNPDistanceRunner.FoodConversionRatePercentPerSecond
+{
+    type = integer, min = 1, max = 10, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_FoodConversionRatePercentPerSecond,
+}
+
+option XNPDistanceRunner.EnableHighEnduranceMeleePower
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableHighEnduranceMeleePower,
+}
+
+option XNPDistanceRunner.MeleePowerStartEndurancePercent
+{
+    type = integer, min = 1, max = 100, default = 80,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MeleePowerStartEndurancePercent,
+}
+
+option XNPDistanceRunner.MeleePowerFullEndurancePercent
+{
+    type = integer, min = 1, max = 100, default = 95,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MeleePowerFullEndurancePercent,
+}
+
+option XNPDistanceRunner.MeleePowerMaxMultiplier
+{
+    type = double, min = 1.00, max = 2.00, default = 2.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MeleePowerMaxMultiplier,
+}
+
+option XNPDistanceRunner.EnablePhoenixTraitLogic
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnablePhoenixTraitLogic,
+}
+
+option XNPDistanceRunner.PhoenixTraitPointCost
+{
+    type = integer, min = 1, max = 20, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixTraitPointCost,
+}
+
+option XNPDistanceRunner.PhoenixTriggerHealthPercent
+{
+    type = integer, min = 20, max = 20, default = 20,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixTriggerHealthPercent,
+}
+
+option XNPDistanceRunner.PhoenixInvulnerabilitySeconds
+{
+    type = double, min = 0.00, max = 10.00, default = 0.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixInvulnerabilitySeconds,
+}
+
+option XNPDistanceRunner.PhoenixBaseCooldownDays
+{
+    type = integer, min = 1, max = 30, default = 7,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixBaseCooldownDays,
+}
+
+option XNPDistanceRunner.PhoenixRequirePanicZeroToRecharge
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixRequirePanicZeroToRecharge,
+}
+
+option XNPDistanceRunner.PhoenixPanicZeroThreshold
+{
+    type = integer, min = 0, max = 100, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixPanicZeroThreshold,
+}
+
+option XNPDistanceRunner.PhoenixEarlyRechargeEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixEarlyRechargeEnabled,
+}
+
+option XNPDistanceRunner.PhoenixEarlyRechargeMaxDays
+{
+    type = integer, min = 0, max = 6, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixEarlyRechargeMaxDays,
+}
+
+option XNPDistanceRunner.PhoenixMinimumCooldownDays
+{
+    type = integer, min = 1, max = 30, default = 5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixMinimumCooldownDays,
+}
+
+option XNPDistanceRunner.PhoenixWellFedCreditMaxDays
+{
+    type = integer, min = 0, max = 6, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixWellFedCreditMaxDays,
+}
+
+option XNPDistanceRunner.PhoenixHealthyCreditMaxDays
+{
+    type = integer, min = 0, max = 6, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixHealthyCreditMaxDays,
+}
+
+option XNPDistanceRunner.PhoenixWellFedRequiredGameHours
+{
+    type = integer, min = 1, max = 720, default = 24,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixWellFedRequiredGameHours,
+}
+
+option XNPDistanceRunner.PhoenixHealthyRequiredGameHours
+{
+    type = integer, min = 1, max = 720, default = 24,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixHealthyRequiredGameHours,
+}
+
+option XNPDistanceRunner.PhoenixHealthyMinHealthPercent
+{
+    type = integer, min = 50, max = 100, default = 95,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixHealthyMinHealthPercent,
+}
+
+option XNPDistanceRunner.PhoenixProtectRadius
+{
+    type = double, min = 1.00, max = 3.50, default = 2.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixProtectRadius,
+}
+
+option XNPDistanceRunner.PhoenixRestoreEndurancePercent
+{
+    type = integer, min = 25, max = 100, default = 100,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixRestoreEndurancePercent,
+}
+
+option XNPDistanceRunner.PhoenixFullCureToggle
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixFullCureToggle,
+}
+
+option XNPDistanceRunner.PhoenixClearZombification
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixClearZombification,
+}
+
+option XNPDistanceRunner.PhoenixProtectDurationSeconds
+{
+    type = double, min = 0.00, max = 5.00, default = 0.00,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixProtectDurationSeconds,
+}
+
+option XNPDistanceRunner.PhoenixShowStatusIcon
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixShowStatusIcon,
+}
+
+option XNPDistanceRunner.PhoenixTooltipEnable
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixTooltipEnable,
+}
+
+option XNPDistanceRunner.PhoenixIconShakeDuringInvulnerability
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixIconShakeDuringInvulnerability,
+}
+
+
+option XNPDistanceRunner.Preset
+{
+    type = enum, numValues = 5, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_Preset,
+    valueTranslation = XNPDistanceRunner_Preset,
+}
+
+option XNPDistanceRunner.EnableYellowTraitSystem
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableYellowTraitSystem,
+}
+
+option XNPDistanceRunner.EnablePurplePhoenixSystem
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnablePurplePhoenixSystem,
+}
+
+option XNPDistanceRunner.EnableGreenTraitSystem
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableGreenTraitSystem,
+}
+
+option XNPDistanceRunner.EnableRedTraitSystem
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableRedTraitSystem,
+}
+
+option XNPDistanceRunner.EnableRoundMarkers
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableRoundMarkers,
+}
+
+option XNPDistanceRunner.EnableTooltips
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableTooltips,
+}
+
+option XNPDistanceRunner.EnableSounds
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableSounds,
+}
+
+option XNPDistanceRunner.HideMarkersWithMap
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_HideMarkersWithMap,
+}
+
+option XNPDistanceRunner.DiagnosticLogLevel
+{
+    type = enum, numValues = 4, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_DiagnosticLogLevel,
+    valueTranslation = XNPDistanceRunner_DiagnosticLogLevel,
+}
+
+option XNPDistanceRunner.MultiplayerAuthorityMode
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MultiplayerAuthorityMode,
+    valueTranslation = XNPDistanceRunner_MultiplayerAuthorityMode,
+}
+
+option XNPDistanceRunner.YellowEnableDistanceGrowth
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowEnableDistanceGrowth,
+}
+
+option XNPDistanceRunner.YellowSpeedGrowthRate
+{
+    type = double, min = 0, max = 0.2, default = 0.02,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowSpeedGrowthRate,
+}
+
+option XNPDistanceRunner.YellowMaxSpeedMultiplier
+{
+    type = double, min = 1, max = 3, default = 1.4,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowMaxSpeedMultiplier,
+}
+
+option XNPDistanceRunner.YellowDistanceDecayDelay
+{
+    type = double, min = 0, max = 30, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowDistanceDecayDelay,
+}
+
+option XNPDistanceRunner.YellowDistanceDecayRate
+{
+    type = double, min = 0, max = 1, default = 0.05,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowDistanceDecayRate,
+}
+
+option XNPDistanceRunner.YellowJogBumpEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowJogBumpEnabled,
+}
+
+option XNPDistanceRunner.YellowSprintImpactEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowSprintImpactEnabled,
+}
+
+option XNPDistanceRunner.YellowSprintTripImmunityEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowSprintTripImmunityEnabled,
+}
+
+option XNPDistanceRunner.YellowGrabBreakoutEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowGrabBreakoutEnabled,
+}
+
+option XNPDistanceRunner.YellowEmergencyGetupEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowEmergencyGetupEnabled,
+}
+
+option XNPDistanceRunner.YellowContactEnduranceCost
+{
+    type = double, min = 0, max = 0.5, default = 0.025,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowContactEnduranceCost,
+}
+
+option XNPDistanceRunner.YellowGrabEnduranceCost
+{
+    type = double, min = 0, max = 0.75, default = 0.06,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowGrabEnduranceCost,
+}
+
+option XNPDistanceRunner.YellowLowEnduranceInjuryRisk
+{
+    type = double, min = 0, max = 1, default = 0.15,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowLowEnduranceInjuryRisk,
+}
+
+option XNPDistanceRunner.YellowMarkerShakeEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowMarkerShakeEnabled,
+}
+
+option XNPDistanceRunner.YellowMarkerShakeIntensity
+{
+    type = double, min = 0, max = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowMarkerShakeIntensity,
+}
+
+option XNPDistanceRunner.PurpleEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleEnabled,
+}
+
+option XNPDistanceRunner.PurpleTriggerHealthPercent
+{
+    type = integer, min = 1, max = 50, default = 20,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleTriggerHealthPercent,
+}
+
+option XNPDistanceRunner.PurpleCooldownMode
+{
+    type = enum, numValues = 1, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleCooldownMode,
+    valueTranslation = XNPDistanceRunner_PurpleCooldownMode,
+}
+
+option XNPDistanceRunner.PurpleCooldownRealSeconds
+{
+    type = double, min = 1, max = 300, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleCooldownRealSeconds,
+}
+
+option XNPDistanceRunner.PurpleRecoveryHealthPercent
+{
+    type = integer, min = 1, max = 100, default = 100,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleRecoveryHealthPercent,
+}
+
+option XNPDistanceRunner.PurpleRecoveryEndurancePercent
+{
+    type = integer, min = 1, max = 100, default = 100,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleRecoveryEndurancePercent,
+}
+
+option XNPDistanceRunner.PurpleFallProtectionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleFallProtectionEnabled,
+}
+
+option XNPDistanceRunner.PurpleRangedPredeathProtectionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleRangedPredeathProtectionEnabled,
+}
+
+option XNPDistanceRunner.PurplePanicGateEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurplePanicGateEnabled,
+}
+
+option XNPDistanceRunner.PurpleManualToggleEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleManualToggleEnabled,
+}
+
+option XNPDistanceRunner.PurpleCooldownReadyState
+{
+    type = enum, numValues = 5, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleCooldownReadyState,
+    valueTranslation = XNPDistanceRunner_PurpleCooldownReadyState,
+}
+
+option XNPDistanceRunner.PurpleDiagnosticDeathLogEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleDiagnosticDeathLogEnabled,
+}
+
+option XNPDistanceRunner.GreenMeleeEnabledByDefault
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMeleeEnabledByDefault,
+}
+
+option XNPDistanceRunner.GreenHighTierEndurancePercent
+{
+    type = integer, min = 1, max = 100, default = 80,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenHighTierEndurancePercent,
+}
+
+option XNPDistanceRunner.GreenMidTierEndurancePercent
+{
+    type = integer, min = 1, max = 100, default = 40,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMidTierEndurancePercent,
+}
+
+option XNPDistanceRunner.GreenHighTierDamageMultiplier
+{
+    type = double, min = 1, max = 20, default = 8,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenHighTierDamageMultiplier,
+}
+
+option XNPDistanceRunner.GreenMidTierDamageMultiplier
+{
+    type = double, min = 1, max = 20, default = 5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMidTierDamageMultiplier,
+}
+
+option XNPDistanceRunner.GreenLowTierDamageMultiplier
+{
+    type = double, min = 1, max = 20, default = 2.5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenLowTierDamageMultiplier,
+}
+
+option XNPDistanceRunner.GreenHighTierEnduranceCost
+{
+    type = double, min = 0, max = 25, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenHighTierEnduranceCost,
+}
+
+option XNPDistanceRunner.GreenMidTierEnduranceCost
+{
+    type = double, min = 0, max = 25, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMidTierEnduranceCost,
+}
+
+option XNPDistanceRunner.GreenLowTierEnduranceCost
+{
+    type = double, min = 0, max = 25, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenLowTierEnduranceCost,
+}
+
+option XNPDistanceRunner.GreenStructureDamageMultiplier
+{
+    type = double, min = 1, max = 50, default = 20,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenStructureDamageMultiplier,
+}
+
+option XNPDistanceRunner.GreenMissCostsEndurance
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMissCostsEndurance,
+}
+
+option XNPDistanceRunner.GreenActiveSkillEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenActiveSkillEnabled,
+}
+
+option XNPDistanceRunner.GreenActiveMode
+{
+    type = enum, numValues = 3, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenActiveMode,
+    valueTranslation = XNPDistanceRunner_GreenActiveMode,
+}
+
+option XNPDistanceRunner.GreenCooldownRealSeconds
+{
+    type = double, min = 0.5, max = 120, default = 5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenCooldownRealSeconds,
+}
+
+option XNPDistanceRunner.GreenTargetSearchRadiusTiles
+{
+    type = double, min = 1, max = 30, default = 12,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetSearchRadiusTiles,
+}
+
+option XNPDistanceRunner.GreenNoTargetSearchSeconds
+{
+    type = double, min = 0.1, max = 10, default = 3.0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenNoTargetSearchSeconds,
+}
+
+option XNPDistanceRunner.GreenImpactVisualHoldMs
+{
+    type = integer, min = 100, max = 1000, default = 300,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenImpactVisualHoldMs,
+}
+
+option XNPDistanceRunner.GreenInitialSpeedMultiplier
+{
+    type = double, min = 0.1, max = 5, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenInitialSpeedMultiplier,
+}
+
+option XNPDistanceRunner.GreenAccelerationStartSeconds
+{
+    type = double, min = 0, max = 10, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenAccelerationStartSeconds,
+}
+
+option XNPDistanceRunner.GreenAccelerationMultiplierPerSecond
+{
+    type = double, min = 1, max = 3, default = 1.5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenAccelerationMultiplierPerSecond,
+}
+
+option XNPDistanceRunner.GreenMaximumVirtualSpeedTilesPerSecond
+{
+    type = double, min = 0.5, max = 30, default = 8,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMaximumVirtualSpeedTilesPerSecond,
+}
+
+option XNPDistanceRunner.GreenMaximumFlightSeconds
+{
+    type = double, min = 0.5, max = 30, default = 8,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMaximumFlightSeconds,
+}
+
+option XNPDistanceRunner.GreenImpactDistanceTiles
+{
+    type = double, min = 0.1, max = 2, default = 0.55,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenImpactDistanceTiles,
+}
+
+option XNPDistanceRunner.GreenExplosionRadiusTiles
+{
+    type = double, min = 0.5, max = 15, default = 7,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenExplosionRadiusTiles,
+}
+
+option XNPDistanceRunner.GreenExplosionBaseDamage
+{
+    type = double, min = 0.1, max = 100, default = 10,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenExplosionBaseDamage,
+}
+
+option XNPDistanceRunner.GreenExplosionFalloffEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenExplosionFalloffEnabled,
+}
+
+option XNPDistanceRunner.GreenTargetOutlineEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetOutlineEnabled,
+}
+
+option XNPDistanceRunner.GreenCastSoundEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenCastSoundEnabled,
+}
+
+option XNPDistanceRunner.GreenImpactSoundEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenImpactSoundEnabled,
+}
+
+option XNPDistanceRunner.GreenRefundCooldownOnNoTarget
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenRefundCooldownOnNoTarget,
+}
+
+option XNPDistanceRunner.GreenExperimentalEntityRendering
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenExperimentalEntityRendering,
+}
+
+option XNPDistanceRunner.GreenWhiteActionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteActionEnabled,
+}
+
+option XNPDistanceRunner.GreenWhiteActionDurationSeconds
+{
+    type = double, min = 0.5, max = 30, default = 4,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteActionDurationSeconds,
+}
+
+option XNPDistanceRunner.GreenWhiteHealthCost
+{
+    type = double, min = 0, max = 0.5, default = 0.05,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteHealthCost,
+}
+
+option XNPDistanceRunner.GreenWhiteEnduranceCost
+{
+    type = double, min = 0, max = 1, default = 0.15,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteEnduranceCost,
+}
+
+option XNPDistanceRunner.GreenWhiteUnhappinessCost
+{
+    type = double, min = 0, max = 100, default = 5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteUnhappinessCost,
+}
+
+option XNPDistanceRunner.GreenWhiteBoredomCost
+{
+    type = double, min = 0, max = 100, default = 5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteBoredomCost,
+}
+
+option XNPDistanceRunner.GreenWhiteMidActionSoundEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteMidActionSoundEnabled,
+}
+
+option XNPDistanceRunner.GreenWhiteActionResultMode
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteActionResultMode,
+    valueTranslation = XNPDistanceRunner_GreenWhiteActionResultMode,
+}
+
+option XNPDistanceRunner.RedStarterItemCount
+{
+    type = integer, min = 0, max = 20, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedStarterItemCount,
+}
+
+option XNPDistanceRunner.RedCraftEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftEnabled,
+}
+
+option XNPDistanceRunner.RedCraftDurationSeconds
+{
+    type = double, min = 0.5, max = 60, default = 4,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftDurationSeconds,
+}
+
+option XNPDistanceRunner.RedCraftHealthCost
+{
+    type = double, min = 0, max = 0.5, default = 0.05,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftHealthCost,
+}
+
+option XNPDistanceRunner.RedCraftHungerCost
+{
+    type = double, min = 0, max = 1, default = 0.1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftHungerCost,
+}
+
+option XNPDistanceRunner.RedSafetyFloorPercent
+{
+    type = integer, min = 1, max = 95, default = 20,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedSafetyFloorPercent,
+}
+
+option XNPDistanceRunner.RedStaminaImmediateRecovery
+{
+    type = double, min = 0, max = 1, default = 0.5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedStaminaImmediateRecovery,
+}
+
+option XNPDistanceRunner.RedStaminaPeriodicRecovery
+{
+    type = double, min = 0, max = 1, default = 0.05,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedStaminaPeriodicRecovery,
+}
+
+option XNPDistanceRunner.RedStaminaPeriodicIntervalSeconds
+{
+    type = double, min = 0.5, max = 60, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedStaminaPeriodicIntervalSeconds,
+}
+
+option XNPDistanceRunner.RedStaminaPeriodicDurationSeconds
+{
+    type = double, min = 0, max = 300, default = 20,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedStaminaPeriodicDurationSeconds,
+}
+
+option XNPDistanceRunner.RedFatigueReduction
+{
+    type = double, min = 0, max = 1, default = 0.25,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedFatigueReduction,
+}
+
+option XNPDistanceRunner.RedMoodReductionPercent
+{
+    type = integer, min = 0, max = 100, default = 50,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedMoodReductionPercent,
+}
+
+option XNPDistanceRunner.RedHealingHealthAmount
+{
+    type = double, min = 0, max = 100, default = 25,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedHealingHealthAmount,
+}
+
+option XNPDistanceRunner.RedHealFractureEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedHealFractureEnabled,
+}
+
+option XNPDistanceRunner.RedClearZombieInfectionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedClearZombieInfectionEnabled,
+}
+
+option XNPDistanceRunner.RedHealMinorWoundCount
+{
+    type = integer, min = 0, max = 20, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedHealMinorWoundCount,
+}
+
+option XNPDistanceRunner.RedHealMajorWoundCount
+{
+    type = integer, min = 0, max = 20, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedHealMajorWoundCount,
+}
+
+option XNPDistanceRunner.MarkerScale
+{
+    type = double, min = 0.5, max = 2, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MarkerScale,
+}
+
+option XNPDistanceRunner.MarkerOpacity
+{
+    type = double, min = 0.2, max = 1, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MarkerOpacity,
+}
+
+option XNPDistanceRunner.MarkerDragEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MarkerDragEnabled,
+}
+
+option XNPDistanceRunner.MarkerResetPositions
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MarkerResetPositions,
+}
+
+option XNPDistanceRunner.TooltipDetailLevel
+{
+    type = enum, numValues = 3, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_TooltipDetailLevel,
+    valueTranslation = XNPDistanceRunner_TooltipDetailLevel,
+}
+
+option XNPDistanceRunner.EnableTargetOutline
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EnableTargetOutline,
+}
+
+option XNPDistanceRunner.PerformanceUpdateIntervalFrames
+{
+    type = integer, min = 1, max = 120, default = 6,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PerformanceUpdateIntervalFrames,
+}
+
+option XNPDistanceRunner.EvidenceLogEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_EvidenceLogEnabled,
+}
+
+
+option XNPDistanceRunner.YellowDistanceGrowthRate
+{
+    type = double, min = 0, max = 0.2, default = 0.02,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowDistanceGrowthRate,
+}
+
+option XNPDistanceRunner.YellowInitialSpeedMultiplier
+{
+    type = double, min = 1, max = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowInitialSpeedMultiplier,
+}
+
+option XNPDistanceRunner.YellowMaximumSpeedMultiplier
+{
+    type = double, min = 1, max = 3, default = 1.4,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowMaximumSpeedMultiplier,
+}
+
+option XNPDistanceRunner.YellowDecayDelaySeconds
+{
+    type = double, min = 0, max = 30, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowDecayDelaySeconds,
+}
+
+option XNPDistanceRunner.YellowDecayRate
+{
+    type = double, min = 0, max = 1, default = 0.05,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowDecayRate,
+}
+
+option XNPDistanceRunner.YellowJogMinimumSpeed
+{
+    type = double, min = 0.1, max = 5, default = 1.45,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowJogMinimumSpeed,
+}
+
+option XNPDistanceRunner.YellowJogImpactForce
+{
+    type = double, min = 0, max = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowJogImpactForce,
+}
+
+option XNPDistanceRunner.YellowJogStaggerChance
+{
+    type = double, min = 0, max = 1, default = 0.70,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowJogStaggerChance,
+}
+
+option XNPDistanceRunner.YellowJogKnockdownChance
+{
+    type = double, min = 0, max = 1, default = 0.22,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowJogKnockdownChance,
+}
+
+option XNPDistanceRunner.YellowSprintMinimumSpeed
+{
+    type = double, min = 0.1, max = 8, default = 3.25,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowSprintMinimumSpeed,
+}
+
+option XNPDistanceRunner.YellowSprintImpactForce
+{
+    type = double, min = 0, max = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowSprintImpactForce,
+}
+
+option XNPDistanceRunner.YellowSprintStaggerChance
+{
+    type = double, min = 0, max = 1, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowSprintStaggerChance,
+}
+
+option XNPDistanceRunner.YellowSprintKnockdownChance
+{
+    type = double, min = 0, max = 1, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowSprintKnockdownChance,
+}
+
+option XNPDistanceRunner.YellowGrabBreakoutCooldownSeconds
+{
+    type = double, min = 0.1, max = 30, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowGrabBreakoutCooldownSeconds,
+}
+
+option XNPDistanceRunner.YellowEmergencyGetupCooldownSeconds
+{
+    type = double, min = 0.1, max = 30, default = 0.75,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowEmergencyGetupCooldownSeconds,
+}
+
+option XNPDistanceRunner.YellowLowEnduranceInjuryChance
+{
+    type = double, min = 0, max = 1, default = 0.15,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowLowEnduranceInjuryChance,
+}
+
+option XNPDistanceRunner.PurpleBaseCooldownDays
+{
+    type = integer, min = 1, max = 30, default = 7,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleBaseCooldownDays,
+}
+
+option XNPDistanceRunner.PurpleMinimumCooldownDays
+{
+    type = integer, min = 1, max = 30, default = 5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleMinimumCooldownDays,
+}
+
+option XNPDistanceRunner.PurpleEarlyRecoveryMaximumDays
+{
+    type = integer, min = 0, max = 6, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleEarlyRecoveryMaximumDays,
+}
+
+option XNPDistanceRunner.PurpleInvulnerabilitySeconds
+{
+    type = double, min = 0, max = 30, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleInvulnerabilitySeconds,
+}
+
+option XNPDistanceRunner.PurpleMaximumTriggerCount
+{
+    type = integer, min = 0, max = 999, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleMaximumTriggerCount,
+}
+
+option XNPDistanceRunner.GreenDisabledDamageMultiplier
+{
+    type = double, min = 1, max = 20, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenDisabledDamageMultiplier,
+}
+
+option XNPDistanceRunner.GreenCooldownSeconds
+{
+    type = double, min = 0.5, max = 120, default = 5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenCooldownSeconds,
+}
+
+option XNPDistanceRunner.GreenMaximumTargetCount
+{
+    type = integer, min = 0, max = 128, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMaximumTargetCount,
+}
+
+option XNPDistanceRunner.GreenInitialSpeedTilesPerSecond
+{
+    type = double, min = 0.1, max = 30, default = 1.45,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenInitialSpeedTilesPerSecond,
+}
+
+option XNPDistanceRunner.GreenLowSpeedDurationSeconds
+{
+    type = double, min = 0, max = 10, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenLowSpeedDurationSeconds,
+}
+
+option XNPDistanceRunner.GreenTargetReacquisitionRadiusTiles
+{
+    type = double, min = 1, max = 30, default = 12,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetReacquisitionRadiusTiles,
+}
+
+option XNPDistanceRunner.GreenMaximumReacquisitionCount
+{
+    type = integer, min = 0, max = 64, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMaximumReacquisitionCount,
+}
+
+option XNPDistanceRunner.GreenWhiteHungerCost
+{
+    type = double, min = 0, max = 1, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteHungerCost,
+}
+
+option XNPDistanceRunner.GreenWhiteSafetyFloorPercent
+{
+    type = integer, min = 0, max = 95, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteSafetyFloorPercent,
+}
+
+option XNPDistanceRunner.GreenWhiteCooldownSeconds
+{
+    type = double, min = 0, max = 300, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteCooldownSeconds,
+}
+
+option XNPDistanceRunner.RedCraftCooldownSeconds
+{
+    type = double, min = 0, max = 3600, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftCooldownSeconds,
+}
+
+option XNPDistanceRunner.RedUseCooldownSeconds
+{
+    type = double, min = 0, max = 3600, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedUseCooldownSeconds,
+}
+
+option XNPDistanceRunner.RedSuccessfulUseConsumesCount
+{
+    type = integer, min = 1, max = 20, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedSuccessfulUseConsumesCount,
+}
+
+option XNPDistanceRunner.RedFailedUseConsumesCount
+{
+    type = integer, min = 0, max = 20, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedFailedUseConsumesCount,
+}
+
+option XNPDistanceRunner.RedPanicReduction
+{
+    type = integer, min = 0, max = 100, default = 50,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedPanicReduction,
+}
+
+option XNPDistanceRunner.RedBoredomReduction
+{
+    type = integer, min = 0, max = 100, default = 50,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedBoredomReduction,
+}
+
+option XNPDistanceRunner.RedUnhappinessReduction
+{
+    type = integer, min = 0, max = 100, default = 50,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedUnhappinessReduction,
+}
+
+option XNPDistanceRunner.MarkerSpacing
+{
+    type = integer, min = 0, max = 32, default = 4,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MarkerSpacing,
+}
+
+option XNPDistanceRunner.MarkerUpdateIntervalFrames
+{
+    type = integer, min = 1, max = 120, default = 15,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MarkerUpdateIntervalFrames,
+}
+
+option XNPDistanceRunner.SchedulerUpdateIntervalFrames
+{
+    type = integer, min = 1, max = 120, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_SchedulerUpdateIntervalFrames,
+}
+
+option XNPDistanceRunner.WorldQueryIntervalFrames
+{
+    type = integer, min = 1, max = 120, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_WorldQueryIntervalFrames,
+}
+
+option XNPDistanceRunner.NearbyZombieCacheRefreshFrames
+{
+    type = integer, min = 1, max = 240, default = 12,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_NearbyZombieCacheRefreshFrames,
+}
+
+option XNPDistanceRunner.UIRefreshIntervalFrames
+{
+    type = integer, min = 1, max = 120, default = 15,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_UIRefreshIntervalFrames,
+}
+
+option XNPDistanceRunner.TargetReacquisitionIntervalFrames
+{
+    type = integer, min = 1, max = 120, default = 15,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_TargetReacquisitionIntervalFrames,
+}
+
+option XNPDistanceRunner.PerformancePreset
+{
+    type = enum, numValues = 3, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PerformancePreset,
+    valueTranslation = XNPDistanceRunner_PerformancePreset,
+}
+
+option XNPDistanceRunner.YellowDistanceCurveMode
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowDistanceCurveMode,
+    valueTranslation = XNPDistanceRunner_YellowDistanceCurveMode,
+}
+
+option XNPDistanceRunner.YellowMarkerColorThresholds
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowMarkerColorThresholds,
+    valueTranslation = XNPDistanceRunner_YellowMarkerColorThresholds,
+}
+
+option XNPDistanceRunner.PurpleMultiplayerAuthority
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleMultiplayerAuthority,
+    valueTranslation = XNPDistanceRunner_PurpleMultiplayerAuthority,
+}
+
+option XNPDistanceRunner.GreenMeleeMultiplayerAuthority
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMeleeMultiplayerAuthority,
+    valueTranslation = XNPDistanceRunner_GreenMeleeMultiplayerAuthority,
+}
+
+option XNPDistanceRunner.GreenTargetPriorityMode
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetPriorityMode,
+    valueTranslation = XNPDistanceRunner_GreenTargetPriorityMode,
+}
+
+option XNPDistanceRunner.GreenWhiteMultiplayerAuthority
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWhiteMultiplayerAuthority,
+    valueTranslation = XNPDistanceRunner_GreenWhiteMultiplayerAuthority,
+}
+
+option XNPDistanceRunner.RedDefaultMode
+{
+    type = enum, numValues = 2, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedDefaultMode,
+    valueTranslation = XNPDistanceRunner_RedDefaultMode,
+}
+
+option XNPDistanceRunner.RedMultiplayerAuthority
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedMultiplayerAuthority,
+    valueTranslation = XNPDistanceRunner_RedMultiplayerAuthority,
+}
+
+
+option XNPDistanceRunner.CompatibilityMode
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_CompatibilityMode,
+}
+
+option XNPDistanceRunner.LegacySaveMigration
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_LegacySaveMigration,
+}
+
+option XNPDistanceRunner.YellowEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowEnabled,
+}
+
+option XNPDistanceRunner.YellowDistanceGrowthEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowDistanceGrowthEnabled,
+}
+
+option XNPDistanceRunner.YellowLowEnduranceInjuryRiskEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowLowEnduranceInjuryRiskEnabled,
+}
+
+option XNPDistanceRunner.PurpleClearZombieInfectionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleClearZombieInfectionEnabled,
+}
+
+option XNPDistanceRunner.PurpleClearFakeInfectionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleClearFakeInfectionEnabled,
+}
+
+option XNPDistanceRunner.PurpleClearZombificationEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleClearZombificationEnabled,
+}
+
+option XNPDistanceRunner.GreenMeleeEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMeleeEnabled,
+}
+
+option XNPDistanceRunner.GreenMeleeRightClickToggleAllowed
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMeleeRightClickToggleAllowed,
+}
+
+option XNPDistanceRunner.GreenFirearmExcluded
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenFirearmExcluded,
+}
+
+option XNPDistanceRunner.GreenVehicleExcluded
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenVehicleExcluded,
+}
+
+option XNPDistanceRunner.GreenExplosionExcluded
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenExplosionExcluded,
+}
+
+option XNPDistanceRunner.GreenShoveExcluded
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenShoveExcluded,
+}
+
+option XNPDistanceRunner.GreenStompExcluded
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenStompExcluded,
+}
+
+option XNPDistanceRunner.GreenBareHandsExcluded
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBareHandsExcluded,
+}
+
+option XNPDistanceRunner.GreenStructureDamageEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenStructureDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenDoorDamageEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenDoorDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenThumpableDamageEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenThumpableDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenActiveDoubleClickEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenActiveDoubleClickEnabled,
+}
+
+option XNPDistanceRunner.GreenTargetReacquisitionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetReacquisitionEnabled,
+}
+
+option XNPDistanceRunner.GreenWallBlockingEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenWallBlockingEnabled,
+}
+
+option XNPDistanceRunner.RedEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedEnabled,
+}
+
+option XNPDistanceRunner.RedGrantOnOldSave
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedGrantOnOldSave,
+}
+
+option XNPDistanceRunner.RedRightClickModeToggleEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedRightClickModeToggleEnabled,
+}
+
+option XNPDistanceRunner.RedDoubleClickCraftEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedDoubleClickCraftEnabled,
+}
+
+option XNPDistanceRunner.RedClearZombificationEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedClearZombificationEnabled,
+}
+
+option XNPDistanceRunner.RedClearFakeInfectionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedClearFakeInfectionEnabled,
+}
+
+option XNPDistanceRunner.RedUseSoundEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedUseSoundEnabled,
+}
+
+option XNPDistanceRunner.RedCraftSoundEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftSoundEnabled,
+}
+
+option XNPDistanceRunner.MarkersEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MarkersEnabled,
+}
+
+option XNPDistanceRunner.YellowMarkerEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowMarkerEnabled,
+}
+
+option XNPDistanceRunner.PurpleMarkerEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleMarkerEnabled,
+}
+
+option XNPDistanceRunner.GreenMarkerEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMarkerEnabled,
+}
+
+option XNPDistanceRunner.RedMarkerEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedMarkerEnabled,
+}
+
+option XNPDistanceRunner.MarkerPositionPersistenceEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_MarkerPositionPersistenceEnabled,
+}
+
+option XNPDistanceRunner.TooltipEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_TooltipEnabled,
+}
+
+option XNPDistanceRunner.TransactionLogEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_TransactionLogEnabled,
+}
+
+option XNPDistanceRunner.PurpleLocalZombiePushEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleLocalZombiePushEnabled,
+}
+
+option XNPDistanceRunner.GreenKnockbackEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenKnockbackEnabled,
+}
+
+option XNPDistanceRunner.GreenKnockdownEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenKnockdownEnabled,
+}
+
+option XNPDistanceRunner.GreenPlayerDamageEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenPlayerDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenNPCDamageEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenNPCDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenBanditDamageEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBanditDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenLockAreaEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenLockAreaEnabled,
+}
+
+option XNPDistanceRunner.GreenLockAreaRadiusTiles
+{
+    type = double, min = 1, max = 12, default = 4,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenLockAreaRadiusTiles,
+}
+
+option XNPDistanceRunner.GreenLockOutlinePulseEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenLockOutlinePulseEnabled,
+}
+
+option XNPDistanceRunner.GreenLockOutlinePulseIntervalSeconds
+{
+    type = double, min = 0.5, max = 30, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenLockOutlinePulseIntervalSeconds,
+}
+
+option XNPDistanceRunner.GreenLockOutlinePulseDurationSeconds
+{
+    type = double, min = 0.1, max = 5, default = 0.65,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenLockOutlinePulseDurationSeconds,
+}
+
+option XNPDistanceRunner.GreenRuntimeTestNoCooldown
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenRuntimeTestNoCooldown,
+}
+
+option XNPDistanceRunner.GreenOrbScreenDiameterPx
+{
+    type = integer, min = 12, max = 128, default = 36,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbScreenDiameterPx,
+}
+
+option XNPDistanceRunner.GreenOrbGlowDiameterPx
+{
+    type = integer, min = 16, max = 160, default = 48,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbGlowDiameterPx,
+}
+
+option XNPDistanceRunner.GreenMinimumVisibleFlightMs
+{
+    type = integer, min = 100, max = 5000, default = 500,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMinimumVisibleFlightMs,
+}
+
+option XNPDistanceRunner.GreenMinimumInflightRenderFrames
+{
+    type = integer, min = 2, max = 30, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenMinimumInflightRenderFrames,
+}
+
+option XNPDistanceRunner.GreenInflightDiagnosticBorderEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenInflightDiagnosticBorderEnabled,
+}
+
+option XNPDistanceRunner.GreenAnimalDamageEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenAnimalDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenActiveStructureDamageEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenActiveStructureDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenVehicleDamageEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenVehicleDamageEnabled,
+}
+
+option XNPDistanceRunner.GreenFireEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenFireEnabled,
+}
+
+option XNPDistanceRunner.RedClearNormalWoundInfectionEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedClearNormalWoundInfectionEnabled,
+}
+
+option XNPDistanceRunner.RedMultiplayerSharingEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedMultiplayerSharingEnabled,
+}
+
+option XNPDistanceRunner.LowPerformanceUIMode
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_LowPerformanceUIMode,
+}
+
+option XNPDistanceRunner.PerformanceStatisticsEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PerformanceStatisticsEnabled,
+}

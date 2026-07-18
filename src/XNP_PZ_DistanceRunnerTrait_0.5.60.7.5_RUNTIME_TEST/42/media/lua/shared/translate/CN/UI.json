@@ -1,0 +1,23 @@
+{
+    "UI_trait_XNPDistanceRunner": "距离跑者",
+    "UI_trait_XNPDistanceRunnerDesc": "长距离奔跑特质：活体僵尸近距离威胁时触发短时应激体力支持，不提供移动速度加成。",
+    "UI_trait_XNPPurplePhoenix": "不死鸟",
+    "UI_trait_XNPPurplePhoenixDesc": "生命降至 20% 或遭遇可前置拦截的致死伤害时恢复一次。触发后进入冷却，冷却完成需手动重新启用。",
+    "UI_trait_XNPGreenSkill": "绿色弹幕与近战增强",
+    "UI_trait_XNPGreenSkillDesc": "默认自动启用分档近战增强；右键开关近战，左键双击发射世界坐标绿色追踪光球。",
+    "UI_trait_XNPFeastGuardian": "饱食守护",
+    "UI_trait_XNPFeastGuardianDesc": "解锁红色守护面板、双正向模式、守护标制作与使用，并在新角色首次进入时获得三个守护标。",
+    "UI_XNPMarker_YellowName": "综合奔跑状态",
+    "UI_XNPMarker_YellowHelp": "显示移动、体力和技能强度。<LINE>右键：启用或关闭黄色系统。<LINE>颜色：白关闭、绿准备、蓝使用中、黄强烈使用、红最高功率/强烈触发。<LINE>左键拖动：移动图标。",
+    "UI_XNPMarker_PhoenixName": "不死鸟重生",
+    "UI_XNPMarker_PhoenixHelp": "血量降至 20% 或遭遇可拦截的致死伤害时触发一次。<LINE>蓝色：已启用并准备。<LINE>白色：5 秒冷却，不能切换。<LINE>绿色：冷却完成但未启用，右键重新启用。<LINE>左键拖动：移动图标。",
+    "UI_XNPMarker_PhoenixCooldown": "测试冷却：%.1f 秒",
+    "UI_XNPMarker_GreenName": "绿色弹幕与近战增强",
+    "UI_XNPMarker_GreenHelp": "右键：开启或关闭自动近战增强。<LINE>绿色、黄色和红色三档近战由沙盒设置控制；发布默认值为 8、5、2.5 倍伤害，每次有效命中消耗 3、2、1 点耐力。<LINE>建筑伤害发布默认值为等效 20 次武器命中。<LINE>绿色状态双击：启动渲染安全的虚拟世界坐标事务，执行搜索、锁定、重定向、追踪和目标位置爆破。<LINE>由于 B42 动态实体渲染路线不稳定，实验性投射物画面已关闭；不会创建光球、范围圈、临时模型或世界物品。<LINE>释放音效、图标安全闪烁、可选目标轮廓、命中音效和僵尸受击反馈保留。<LINE>爆炸只伤害感染者；玩家、人类、动物、建筑、车辆和火焰伤害均为零。<LINE>白色状态双击：执行沙盒配置的准备动作。<LINE>左键拖动：移动图标。",
+    "UI_XNPMarker_RedName": "红色守护标",
+    "UI_XNPMarker_RedHelp": "右键：直接切换绿色/白色模式。<LINE>左键双击：通过制作动作制作一个红色守护标。<LINE>从物品栏右键菜单使用守护标。<LINE>绿色：正向恢复耐力、疲劳、恐慌、无聊和不快，并提供 60 活跃秒恢复。<LINE>白色：增加 50 点总生命，清除僵尸感染，并限量随机治疗伤口。<LINE>蓝色：正在制作。<LINE>左键拖动：移动图标。",
+    "UI_XNPMarker_RedLocked": "需要饱食守护特质。<LINE>面板仍以低透明度显示，但模式切换、制作、物品使用和三个初始物品均被锁定。",
+    "UI_XNPMarker_RedMode": "模式",
+    "UI_XNPMarker_RedCount": "数量",
+    "UI_XNPMarker_State": "状态"
+}

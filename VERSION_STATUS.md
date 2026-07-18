@@ -1,0 +1,18 @@
+# Version status
+
+```text
+VERSION=0.5.60.7.5
+CHANNEL=RUNTIME_TEST
+USER_CONFIRMED_FUNCTIONS_PRESENT=true
+SECOND_PASS_AUDIT=PASS
+SOURCE_KAHLUA_FAIL=0
+WORKSHOP_KAHLUA_FAIL=0
+PRIVATE_DATA_LEAK_COUNT=0
+DEVELOPMENT_BRANCH_TARGET=develop/0.5.60.7.5
+STABLE_RELEASE_ALLOWED=false
+LICENSE_STATUS=NOT_SELECTED
+ORGANIZATION_STATUS=READY
+```
+
+The user confirmation records observed function availability; it is not represented as automated full-runtime coverage.
+

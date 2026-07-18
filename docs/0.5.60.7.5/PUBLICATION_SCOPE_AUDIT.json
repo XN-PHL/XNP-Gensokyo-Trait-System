@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "project": "XNP Gensokyo Trait System",
+  "mod_id": "XNP_PZ_DistanceRunnerTrait",
+  "version": "0.5.60.7.5",
+  "channel": "RUNTIME_TEST",
+  "user_confirmed_functions_present": true,
+  "user_confirmation_role": "USER_CONFIRMED_RUNTIME_RESULT",
+  "automated_full_runtime_proof": false,
+  "stable_release_allowed": false,
+  "license_status": "NOT_SELECTED",
+  "static_audit": {
+    "second_pass_audit": "PASS",
+    "source_lua_file_count": 101,
+    "source_kahlua_fail": 0,
+    "workshop_lua_file_count": 101,
+    "workshop_kahlua_fail": 0,
+    "workshop_mirror_diff_count": 0,
+    "duplicate_mod_id_count": 0,
+    "duplicate_workshop_id_count": 0,
+    "missing_required_file_count": 0,
+    "source_manifest_hash_mismatch_count": 0,
+    "test_flag_documentation_mismatch_count": 0
+  },
+  "privacy_audit": {
+    "private_data_leak_count": 0,
+    "absolute_windows_path_leak_count": 0,
+    "email_leak_count": 0,
+    "steam_login_reference_count": 0,
+    "token_password_cookie_session_count": 0,
+    "raw_console_file_count": 0,
+    "screenshot_file_count": 0,
+    "save_file_count": 0,
+    "third_party_source_count": 0,
+    "internal_audit_fulltext_count": 0
+  },
+  "allowed_public_identifiers": {
+    "steam_workshop_id": "3762431102",
+    "author": "世界第一小脑 / XN-PHL",
+    "version": "0.5.60.7.5"
+  },
+  "organization_status": "READY"
+}
+

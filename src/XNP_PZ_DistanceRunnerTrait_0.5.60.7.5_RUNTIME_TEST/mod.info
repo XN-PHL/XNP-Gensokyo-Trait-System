@@ -1,0 +1,7 @@
+name=XNP Distance Runner Trait 0.5.60.7.5 Inflight Visibility Proof Local Outline Scan
+id=XNP_PZ_DistanceRunnerTrait
+description=Build 42 runtime-test source with corrected per-player world projection, fail-closed inflight draw proof, minimum visible flight, bounded local outline scans, NPC/Bandit damage, player immunity, and test no-cooldown.
+poster=poster.png
+version=0.5.60.7.5
+modversion=0.5.60.7.5
+author=XN-PHL
