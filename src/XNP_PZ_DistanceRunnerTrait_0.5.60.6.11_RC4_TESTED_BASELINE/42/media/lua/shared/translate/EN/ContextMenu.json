@@ -1,0 +1,7 @@
+{
+    "ContextMenu_ConsumeRedGuardianMark": "Use Red Magic Mark",
+    "ContextMenu_UseRedMagicMark": "Use Guardian Mark",
+    "Tooltip_XNPRedGuardianTraitRequired": "Requires the Red Guardian trait.",
+    "ContextMenu_RedMagicModeStamina": "Switch: stamina recovery mode",
+    "ContextMenu_RedMagicModeTreatment": "Switch: whole-body treatment mode"
+}

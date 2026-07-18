@@ -1,0 +1,23 @@
+{
+    "UI_trait_XNPDistanceRunner": "Distance Runner",
+    "UI_trait_XNPDistanceRunnerDesc": "Distance-running trait: nearby live zombies trigger short adrenaline stamina support. No movement speed bonus.",
+    "UI_trait_XNPPurplePhoenix": "Phoenix",
+    "UI_trait_XNPPurplePhoenixDesc": "Recovers once at 20% health or on an interceptable fatal edge. It then cools down and must be manually re-enabled.",
+    "UI_trait_XNPGreenSkill": "Green Barrage and Melee Boost",
+    "UI_trait_XNPGreenSkillDesc": "Tiered melee power starts enabled. Right-click toggles it; green-state double-click launches the world orb, while white-state double-click prepares and re-arms it at a cost.",
+    "UI_trait_XNPFeastGuardian": "Feast Guardian",
+    "UI_trait_XNPFeastGuardianDesc": "Unlocks the Red Guardian panel, dual positive modes, mark crafting, mark use, and three starter marks.",
+    "UI_XNPMarker_YellowName": "Combined Running Status",
+    "UI_XNPMarker_YellowHelp": "Shows movement, endurance, and skill intensity.<LINE>Right-click: enable or disable the yellow system.<LINE>Colors: white off, green ready, blue active, yellow strong use, red maximum power/strong trigger.<LINE>Left-drag: move the marker.",
+    "UI_XNPMarker_PhoenixName": "Phoenix Rebirth",
+    "UI_XNPMarker_PhoenixHelp": "Triggers once at 20% health or on an interceptable fatal damage edge.<LINE>Blue: enabled and ready.<LINE>White: 5-second cooldown; switching is locked.<LINE>Green: cooldown complete but disabled; right-click to re-enable.<LINE>Left-drag: move the marker.",
+    "UI_XNPMarker_PhoenixCooldown": "Test cooldown: %.1f seconds",
+    "UI_XNPMarker_GreenName": "Green Barrage and Melee Boost",
+    "UI_XNPMarker_GreenHelp": "Right-click: enable or disable automatic melee power.<LINE>Green, yellow, and red melee tiers are controlled by Sandbox settings; release defaults are x8, x5, and x2.5 with 3, 2, and 1 endurance cost.<LINE>Structures: release default is 20 equivalent weapon hits.<LINE>Green-state double-click: start a render-safe virtual world-coordinate transaction that searches, locks, retargets, tracks, and explodes at the target.<LINE>Experimental projectile visuals are disabled because the B42 dynamic entity rendering route is unstable. No orb, range circle, temporary model, or world item is created.<LINE>Cast sound, safe icon flash, optional target outline, impact sound, and zombie hit feedback remain.<LINE>The explosion damages infected only. Player, human, animal, structure, vehicle, and fire damage are zero.<LINE>White-state double-click: perform the configured preparation action.<LINE>Left-drag: move the marker.",
+    "UI_XNPMarker_RedName": "Red Guardian Mark",
+    "UI_XNPMarker_RedHelp": "Right-click: directly switch green/white mode.<LINE>Double-click: craft one Red Guardian Mark through a timed action.<LINE>Use a mark from its inventory context menu.<LINE>Green: positive stamina, fatigue, panic, boredom and unhappiness recovery plus 60 active seconds of regeneration.<LINE>White: +50 health, zombie-infection purge, and limited random wound treatment.<LINE>Blue: crafting in progress.<LINE>Left-drag: move the marker.",
+    "UI_XNPMarker_RedLocked": "Requires the Feast Guardian trait.<LINE>The panel remains visible for discovery, but mode switching, crafting, item use, and starter items are locked.",
+    "UI_XNPMarker_RedMode": "Mode",
+    "UI_XNPMarker_RedCount": "Count",
+    "UI_XNPMarker_State": "State"
+}
