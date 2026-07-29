@@ -1,0 +1,47 @@
+module Base
+{
+    sound XNPPhoenixRevive
+    {
+        category = UI,
+        clip
+        {
+            file = media/sound/xnp_phoenix_revive.ogg,
+        }
+    }
+
+    sound XNPRedUseOrPhoenixReady
+    {
+        category = UI,
+        clip
+        {
+            file = media/sound/xnp_red_use_or_phoenix_ready.ogg,
+        }
+    }
+
+    sound XNPMarkerToggle
+    {
+        category = UI,
+        clip
+        {
+            file = media/sound/xnp_marker_toggle.ogg,
+        }
+    }
+
+    sound XNPGreenBombSkill
+    {
+        category = UI,
+        clip
+        {
+            file = media/sound/xnp_green_bomb_skill.ogg,
+        }
+    }
+
+    sound XNPGreenProjectileCast
+    {
+        category = UI,
+        clip
+        {
+            file = media/sound/xnp_green_projectile_cast.ogg,
+        }
+    }
+}

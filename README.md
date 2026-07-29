@@ -1,33 +1,77 @@
-# XNP Gensokyo Trait System — Source & Failure History Archive
+# XNP Gensokyo Trait System
 
-作者：**世界第一小脑 / XN-PHL**  
-Steam Workshop ID：`3762431102`
+> Current channel: V2 test
+> Current version: `2.1.0-test.1`
+> Build Marker: `XNP_V2_210_TEST1_IMPROVEMENTS_A`
+> Test Workshop ID: `3762431102`
+> Stable release: separate release chain, not updated by this publication
 
-本仓库只保存两类内容：
+**The current `SOURCE/` tree is a test build, not the stable release.**
 
-1. `src/`：曾经实机使用过的 **0.5.60.6.11 RC4 开发基线源码**；
-2. `history/`：经过脱敏的错误、根因、审计和修复演化记录，用于避免后续开发重复踩坑。
+[中文说明](README_CN.md) | [English README](README_EN.md) | [Test Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3762431102)
 
-## 重要边界
+## Current Source
 
-- 这是**开发归档仓库**，不是最新正式发布包，也不是可直接订阅安装的 Workshop 项目。
-- 二次静态复核发现该基线仍保留测试态与发布阻断，详见 `docs/BASELINE_STATUS.md`。
-- 仓库故意不包含海报、预览图、截图、音频、纹理、Workshop 上传项目、原始控制台日志和私有本机路径。
-- `src/` 只保留 Lua、配置、翻译和脚本等文本源码。
-- `history/` 的目的不是证明所有旧方案可用，而是记录哪些方案失败、为什么失败、后来如何修正。
+`SOURCE/` directly contains the installable Project Zomboid mod tree:
 
-## 许可证状态
+```text
+SOURCE/
+├─ mod.info
+├─ poster.png
+└─ 42/
+   ├─ mod.info
+   ├─ poster.png
+   └─ media/
+```
 
-当前未发布明确开源许可证。除非仓库后续明确增加 LICENSE，否则默认保留全部权利：
+The repository keeps the older `src/`, `history/`, and `docs/` development archive. Those records are not replaced by the current test source.
 
-- 不允许未经授权重新发布；
-- 不允许未经授权商业使用；
-- 引用错误历史或技术结论时应注明来源。
+## Four-Trait System
 
-## 推荐阅读顺序
+- Yellow: Distance Runner movement, stamina, and emergency breakout behavior.
+- Red: Guardian and crafting feedback systems.
+- Green: projectile and combat utility systems.
+- Purple: Phoenix recovery and independent Life Stock inheritance systems.
 
-1. `docs/BASELINE_STATUS.md`
-2. `history/development-evidence/KNOWN_ISSUES_AND_FIXES.md`
-3. `history/development-evidence/02_ALL_ERRORS_AND_ROOT_CAUSES.md`
-4. `history/development-evidence/01_COMPLETE_VERSION_TIMELINE.md`
-5. `history/development-evidence/versions/`
+## Test Build Additions
+
+- Alt-triggered yellow crowd breakout with zero direct damage and no duplicate world scan.
+- Bounded red crafting sweat, temperature, exertion, and fatigue feedback.
+- One-summary purple footwear repair feedback.
+- Disabled-by-default developer tools for XNP-owned damaged test items.
+- Unified authoritative Sandbox tuning for the new options.
+- Phoenix protection checks that restore only when an actual leak is detected.
+
+## Evidence Status
+
+| Area | Status | Boundary |
+| --- | --- | --- |
+| Yellow Alt breakout | PARTIAL | Offline checks pass; exact Build 42 grab/bite interruption still needs a real-game test. |
+| Red crafting feedback | PASS | Static and offline harness pass. |
+| Purple repair summary | PASS | Static and offline harness pass. |
+| Developer test tools | PASS | Static and offline harness pass; disabled by default. |
+| Sandbox authority | PASS | Raw/effective option drift is zero in offline checks. |
+| Phoenix leak optimization | PASS | Offline regression checks pass. |
+| Combined test-build runtime | NOT_TESTED | No complete real-game matrix has been recorded for this exact package. |
+
+Offline verification completed with 130/130 Kahlua syntax checks and all recorded regression harness groups passing. Offline evidence is not a substitute for Build 42 runtime evidence.
+
+## Installation From Source
+
+Copy the contents of `SOURCE/` into a local Project Zomboid mod folder named `XNP_PZ_DistanceRunnerTrait`, then enable the mod for Build 42. The Workshop test item is the recommended route for ordinary testing.
+
+## Known Limits
+
+- Build 42.20 compatibility is not yet tested.
+- Multiplayer behavior is not fully validated.
+- Bandits2 is optional compatibility, not a hard dependency.
+- Exact yellow strong-control interruption remains runtime-partial.
+
+## History And License
+
+- [Current test status](docs/CURRENT_STATUS.md)
+- [Archived baseline status](docs/BASELINE_STATUS.md)
+- [Development history](history/)
+- [License status](LICENSE_STATUS.md)
+
+No open-source license has been selected. **All rights reserved.**

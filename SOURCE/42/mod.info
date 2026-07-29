@@ -1,0 +1,7 @@
+name=XNP 多模式特质联动｜幻想乡玩法系统 V2 测试版
+id=XNP_PZ_DistanceRunnerTrait
+description=Build 42 四套独立特质联动玩法系统测试版。稳定基线已在 Build 42.19 单机验证；本轮实验改进仍需实机测试。支持 Sandbox 调整，Bandits2 为可选兼容而非硬依赖。
+poster=poster.png
+version=2.1.0-test.1
+modversion=2.1.0-test.1
+author=世界第一小脑 / XN-PHL

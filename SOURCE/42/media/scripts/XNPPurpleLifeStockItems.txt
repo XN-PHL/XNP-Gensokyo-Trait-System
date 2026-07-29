@@ -1,0 +1,25 @@
+module XNP_PZ_DistanceRunner
+{
+    imports
+    {
+        Base,
+    }
+
+    item PurpleLifeStockRecorder
+    {
+        DisplayCategory = FirstAid,
+        ItemType = base:normal,
+        Weight = 0.1,
+        Icon = XNPPurpleLifeStock,
+        Tooltip = Tooltip_XNPPurpleLifeStockRecorder,
+    }
+
+    item PurpleLifeStockBackup
+    {
+        DisplayCategory = FirstAid,
+        ItemType = base:normal,
+        Weight = 0.1,
+        Icon = XNPPurpleLifeStock,
+        Tooltip = Tooltip_XNPPurpleLifeStockBackup,
+    }
+}

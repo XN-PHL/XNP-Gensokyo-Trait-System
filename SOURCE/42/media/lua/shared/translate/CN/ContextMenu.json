@@ -1,0 +1,16 @@
+{
+    "ContextMenu_ConsumeRedGuardianMark": "\u4f7f\u7528\u7ea2\u8272\u9b54\u529b\u6807",
+    "ContextMenu_UseRedMagicMark": "\u4f7f\u7528P\u70b9",
+    "Tooltip_XNPRedGuardianTraitRequired": "\u9700\u8981\u7ea2\u8272\u5b88\u62a4\u7279\u8d28\u3002",
+    "ContextMenu_RedMagicModeStamina": "\u5207\u6362\uff1a\u4f53\u529b\u6062\u590d\u6a21\u5f0f",
+    "ContextMenu_RedMagicModeTreatment": "\u5207\u6362\uff1a\u5168\u8eab\u7597\u4f24\u6a21\u5f0f",
+    "ContextMenu_XNPPurpleRecordNow": "\u7acb\u5373\u8bb0\u5f55\u5f53\u524d\u89d2\u8272",
+    "ContextMenu_XNPPurpleInheritBackup": "\u7ee7\u627f\u6b64\u6b8b\u673a\u5907\u4efd",
+    "ContextMenu_XNPPurpleUseBackup": "\u4f7f\u7528\u6b8b\u673a\u5907\u4efd",
+    "ContextMenu_XNPPurpleMigrateLegacy": "\u8fc1\u79fb\u65e7\u7248\u6b8b\u673a",
+    "ContextMenu_XNPTestSpawnShoe10": "[XNP \u6d4b\u8bd5] \u751f\u6210 10% \u8010\u4e45\u978b\u7c7b",
+    "ContextMenu_XNPTestSpawnShoe50": "[XNP \u6d4b\u8bd5] \u751f\u6210 50% \u8010\u4e45\u978b\u7c7b",
+    "ContextMenu_XNPTestSpawnNonShoe10": "[XNP \u6d4b\u8bd5] \u751f\u6210 10% \u8010\u4e45\u975e\u978b\u8863\u7269",
+    "ContextMenu_XNPTestSpawnWeapon10": "[XNP \u6d4b\u8bd5] \u751f\u6210 10% \u8010\u4e45\u6b66\u5668",
+    "ContextMenu_XNPTestClearOwned": "[XNP \u6d4b\u8bd5] \u6e05\u7406 XNP \u751f\u6210\u7269\u54c1"
+}

@@ -1,13 +1,42 @@
-# XNP Gensokyo Trait System — Source and Failure-History Archive
+# XNP Gensokyo Trait System V2 Test
 
-Author: **世界第一小脑 / XN-PHL**  
-Steam Workshop ID: `3762431102`
+```text
+Channel: V2 test
+Version: 2.1.0-test.1
+Build Marker: XNP_V2_210_TEST1_IMPROVEMENTS_A
+Test Workshop ID: 3762431102
+Stable release updated by this publication: no
+```
 
-This repository contains only:
+The current `SOURCE/` tree is a test build, not the stable release.
 
-1. `src/`: the text source of the previously used `0.5.60.6.11 RC4` development baseline;
-2. `history/`: sanitized failure, root-cause, audit, and repair-evolution records intended to prevent repeated implementation mistakes.
+## What Is Included
 
-This is a development archive, not the latest production release or an installable Workshop package. Binary assets, screenshots, audio, textures, raw console logs, Workshop upload files, and private local paths are intentionally excluded.
+The mod combines four independent trait systems:
 
-No explicit open-source license has been selected. All rights are reserved unless a LICENSE is published later.
+- Yellow: Distance Runner movement and emergency breakout.
+- Red: Guardian and crafting feedback.
+- Green: projectile and combat utility.
+- Purple: Phoenix recovery and independent Life Stock inheritance.
+
+Version `2.1.0-test.1` adds the yellow Alt crowd breakout, bounded red crafting feedback, a single purple repair summary, disabled-by-default developer item tools, synchronized Sandbox options, and a Phoenix leak-only restore optimization.
+
+## Verification Status
+
+- Yellow Alt breakout: `PARTIAL`. Offline checks pass; exact Build 42 grab/bite interruption still requires a real-game test.
+- Red crafting feedback: `PASS` in static and offline checks.
+- Purple repair summary: `PASS` in static and offline checks.
+- Developer tools: `PASS` in static and offline checks, disabled by default.
+- Sandbox authority: `PASS` in offline checks.
+- Phoenix leak optimization: `PASS` in offline regression checks.
+- Full combined runtime matrix for this exact test package: `NOT_TESTED`.
+
+Kahlua syntax passed 130/130 files. All recorded offline regression harness groups passed. These results do not claim complete real-game or multiplayer validation.
+
+## Install
+
+Copy the contents of `SOURCE/` into a local Project Zomboid mod folder named `XNP_PZ_DistanceRunnerTrait`, or subscribe to the [test Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3762431102).
+
+The older `src/`, `history/`, and `docs/` trees remain available as development records.
+
+No open-source license has been selected. **All rights reserved.**

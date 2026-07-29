@@ -1,0 +1,16 @@
+{
+    "ContextMenu_ConsumeRedGuardianMark": "Use Red Magic Mark",
+    "ContextMenu_UseRedMagicMark": "Use P Point",
+    "Tooltip_XNPRedGuardianTraitRequired": "Requires the Red Guardian trait.",
+    "ContextMenu_RedMagicModeStamina": "Switch: stamina recovery mode",
+    "ContextMenu_RedMagicModeTreatment": "Switch: whole-body treatment mode",
+    "ContextMenu_XNPPurpleRecordNow": "Record Current Character Now",
+    "ContextMenu_XNPPurpleInheritBackup": "Inherit This Extra Life Backup",
+    "ContextMenu_XNPPurpleUseBackup": "Use Extra Life Backup",
+    "ContextMenu_XNPPurpleMigrateLegacy": "Migrate Legacy Extra Life",
+    "ContextMenu_XNPTestSpawnShoe10": "[XNP TEST] Spawn shoe at 10%",
+    "ContextMenu_XNPTestSpawnShoe50": "[XNP TEST] Spawn shoe at 50%",
+    "ContextMenu_XNPTestSpawnNonShoe10": "[XNP TEST] Spawn non-shoe clothing at 10%",
+    "ContextMenu_XNPTestSpawnWeapon10": "[XNP TEST] Spawn weapon at 10%",
+    "ContextMenu_XNPTestClearOwned": "[XNP TEST] Clear XNP test items"
+}

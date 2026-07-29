@@ -1,0 +1,15 @@
+module XNP_PZ_DistanceRunner
+{
+    imports
+    {
+        Base,
+    }
+
+    item RedGuardianMark
+    {
+        DisplayCategory = FirstAid,
+        ItemType = base:normal,
+        Weight = 0.1,
+        Icon = XNPRedMagicP,
+    }
+}

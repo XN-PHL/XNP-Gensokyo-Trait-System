@@ -1,0 +1,6 @@
+{
+    "Tooltip_XNPPurpleLifeStockRecorder": "Legacy compatibility item. It is migrated once and is never granted automatically.",
+    "Tooltip_XNPPurpleLifeStockBackup": "Choose Use Extra Life Backup from the context menu, or double-click. It is consumed only after a successful restore.",
+    "Tooltip_XNPYellowAltCrowdBreakout": "走行キーを押した時、強い拘束中または3体以上の危険な包囲でのみ近くのゾンビを穏やかに押し戻します。ダメージを与えず、発生済みのダメージも戻しません。",
+    "Tooltip_XNPDeveloperTestTools": "テスト版専用で既定では無効です。XNP所有マーク付きの破損テスト品だけを生成し、通常アイテムは削除しません。"
+}

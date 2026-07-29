@@ -1,0 +1,55 @@
+module XNPDistanceRunnerTrait
+{
+    character_trait_definition XNPDistanceRunnerTrait:XNPDistanceRunner
+    {
+        IsProfessionTrait = false,
+        DisabledInMultiplayer = false,
+        CharacterTrait = XNPDistanceRunnerTrait:XNPDistanceRunner,
+        Cost = 1,
+        UIName = UI_trait_XNPDistanceRunner,
+        UIDescription = UI_trait_XNPDistanceRunnerDesc,
+        Texture = media/ui/Traits/trait_xnpdistancerunner.png,
+    }
+}
+
+module XNPPhoenixTrait
+{
+    character_trait_definition XNPPhoenixTrait:XNPPurplePhoenix
+    {
+        IsProfessionTrait = false,
+        DisabledInMultiplayer = false,
+        CharacterTrait = XNPPhoenixTrait:XNPPurplePhoenix,
+        Cost = 1,
+        UIName = UI_trait_XNPPurplePhoenix,
+        UIDescription = UI_trait_XNPPurplePhoenixDesc,
+        Texture = media/ui/Traits/trait_xnppurplephoenix.png,
+    }
+}
+
+module XNPBlueEcoBarrageTrait
+{
+    character_trait_definition XNPBlueEcoBarrageTrait:XNPBlueEcoBarrage
+    {
+        IsProfessionTrait = false,
+        DisabledInMultiplayer = false,
+        CharacterTrait = XNPBlueEcoBarrageTrait:XNPBlueEcoBarrage,
+        Cost = 1,
+        UIName = UI_trait_XNPGreenSkill,
+        UIDescription = UI_trait_XNPGreenSkillDesc,
+        Texture = media/ui/XNPMarkers/xnp_marker_green.png,
+    }
+}
+
+module XNPFeastGuardianTrait
+{
+    character_trait_definition XNPFeastGuardianTrait:XNPFeastGuardian
+    {
+        IsProfessionTrait = false,
+        DisabledInMultiplayer = false,
+        CharacterTrait = XNPFeastGuardianTrait:XNPFeastGuardian,
+        Cost = 1,
+        UIName = UI_trait_XNPFeastGuardian,
+        UIDescription = UI_trait_XNPFeastGuardianDesc,
+        Texture = media/ui/XNP_Traits/xnp_trait_red_guardian.png,
+    }
+}

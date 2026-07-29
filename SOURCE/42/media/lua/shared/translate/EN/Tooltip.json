@@ -1,0 +1,6 @@
+{
+    "Tooltip_XNPPurpleLifeStockRecorder": "Legacy compatibility item. It is migrated once and is never granted automatically.",
+    "Tooltip_XNPPurpleLifeStockBackup": "Choose Use Extra Life Backup from the context menu, or double-click. It is consumed only after a successful restore.",
+    "Tooltip_XNPYellowAltCrowdBreakout": "On the bound Run-key press, gently pushes nearby zombies only during strong control or a dangerous crowd of at least three. It deals no damage and never reverses existing damage.",
+    "Tooltip_XNPDeveloperTestTools": "Test-build only and disabled by default. It creates only XNP-owned damaged test items, and cleanup never deletes ordinary items."
+}

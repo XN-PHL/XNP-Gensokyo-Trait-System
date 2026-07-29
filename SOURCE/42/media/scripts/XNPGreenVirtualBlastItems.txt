@@ -1,0 +1,18 @@
+module XNP_PZ_DistanceRunner
+{
+    item GreenOrbRadialShock
+    {
+        DisplayCategory = Hidden,
+        ItemType = base:weapon,
+        Weight = 0.0,
+        MaxDamage = 0.0,
+        MinDamage = 0.0,
+        MaxHitcount = 1,
+        MaxRange = 1.0,
+        MinimumSwingtime = 0.01,
+        SwingAnim = Bat,
+        Swingtime = 0.01,
+        UseSelf = false,
+        ConditionMax = 1,
+    }
+}
