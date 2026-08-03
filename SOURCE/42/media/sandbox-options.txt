@@ -349,7 +349,6 @@ option XNPDistanceRunner.PhoenixIconShakeDuringInvulnerability
     page = XNPDistanceRunner, translation = XNPDistanceRunner_PhoenixIconShakeDuringInvulnerability,
 }
 
-
 option XNPDistanceRunner.Preset
 {
     type = enum, numValues = 5, default = 1,
@@ -716,6 +715,12 @@ option XNPDistanceRunner.GreenGuidanceTurnLevel
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenGuidanceTurnLevel,
 }
 
+option XNPDistanceRunner.GreenGuidanceTurnDegreesPerSecond
+{
+    type = double, min = 15, max = 360, default = 150,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenGuidanceTurnDegreesPerSecond,
+}
+
 option XNPDistanceRunner.GreenPreLockCruiseSpeedTilesPerSecond
 {
     type = double, min = 0.1, max = 12, default = 2.0,
@@ -730,7 +735,7 @@ option XNPDistanceRunner.GreenLockedMaxSpeedTilesPerSecond
 
 option XNPDistanceRunner.GreenAccelerationTimeToMaxSeconds
 {
-    type = double, min = 0.5, max = 15, default = 6,
+    type = double, min = 0.5, max = 15, default = 4.5,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenAccelerationTimeToMaxSeconds,
 }
 
@@ -1222,7 +1227,7 @@ option XNPDistanceRunner.GreenCollisionSweptTestEnabled
 
 option XNPDistanceRunner.GreenTargetOutlineEnabled
 {
-    type = boolean, default = true,
+    type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetOutlineEnabled,
 }
 
@@ -1242,12 +1247,6 @@ option XNPDistanceRunner.GreenRefundCooldownOnNoTarget
 {
     type = boolean, default = true,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenRefundCooldownOnNoTarget,
-}
-
-option XNPDistanceRunner.GreenExperimentalEntityRendering
-{
-    type = boolean, default = false,
-    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenExperimentalEntityRendering,
 }
 
 option XNPDistanceRunner.GreenWhiteActionEnabled
@@ -1329,10 +1328,10 @@ option XNPDistanceRunner.RedCraftHealthCostPoints
     page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftHealthCostPoints,
 }
 
-option XNPDistanceRunner.RedCraftUnhappinessCost
+option XNPDistanceRunner.RedCraftUnhappinessReductionPoints
 {
     type = integer, min = 0, max = 100, default = 10,
-    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftUnhappinessCost,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftUnhappinessReductionPoints,
 }
 
 option XNPDistanceRunner.RedPCraftBoredomReduction
@@ -1467,7 +1466,6 @@ option XNPDistanceRunner.EvidenceLogEnabled
     type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_EvidenceLogEnabled,
 }
-
 
 option XNPDistanceRunner.YellowDistanceGrowthRate
 {
@@ -1800,19 +1798,6 @@ option XNPDistanceRunner.RedMultiplayerAuthority
     type = enum, numValues = 3, default = 1,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_RedMultiplayerAuthority,
     valueTranslation = XNPDistanceRunner_RedMultiplayerAuthority,
-}
-
-
-option XNPDistanceRunner.CompatibilityMode
-{
-    type = boolean, default = true,
-    page = XNPDistanceRunner, translation = XNPDistanceRunner_CompatibilityMode,
-}
-
-option XNPDistanceRunner.LegacySaveMigration
-{
-    type = boolean, default = true,
-    page = XNPDistanceRunner, translation = XNPDistanceRunner_LegacySaveMigration,
 }
 
 option XNPDistanceRunner.YellowEnabled
@@ -2153,7 +2138,7 @@ option XNPDistanceRunner.PerformanceStatisticsEnabled
 
 option XNPDistanceRunner.GreenTargetFlashEnabled
 {
-    type = boolean, default = true,
+    type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetFlashEnabled,
 }
 
@@ -2175,6 +2160,13 @@ option XNPDistanceRunner.GreenTargetFlashStaggerEnabled
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetFlashStaggerEnabled,
 }
 
+option XNPDistanceRunner.GreenOrbVisualStyle
+{
+    type = enum, numValues = 6, default = 6,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbVisualStyle,
+    valueTranslation = XNPDistanceRunner_GreenOrbVisualStyle,
+}
+
 option XNPDistanceRunner.GreenOrbSpinEnabled
 {
     type = boolean, default = true,
@@ -2183,7 +2175,7 @@ option XNPDistanceRunner.GreenOrbSpinEnabled
 
 option XNPDistanceRunner.GreenOrbSpinDegreesPerSecond
 {
-    type = double, min = 0, max = 1080, default = 220,
+    type = double, min = 0, max = 1080, default = 180,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbSpinDegreesPerSecond,
 }
 
@@ -2195,31 +2187,31 @@ option XNPDistanceRunner.GreenOrbSpinFrameCount
 
 option XNPDistanceRunner.GreenOrbGlowPulseEnabled
 {
-    type = boolean, default = true,
+    type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbGlowPulseEnabled,
 }
 
 option XNPDistanceRunner.GreenOrbGlowPulseHz
 {
-    type = double, min = 0.1, max = 12, default = 3,
+    type = double, min = 0.1, max = 12, default = 1.25,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbGlowPulseHz,
 }
 
 option XNPDistanceRunner.GreenOrbGlowJitterEnabled
 {
-    type = boolean, default = true,
+    type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbGlowJitterEnabled,
 }
 
 option XNPDistanceRunner.GreenOrbGlowJitterPixels
 {
-    type = double, min = 0, max = 6, default = 1.5,
+    type = double, min = 0, max = 6, default = 0,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbGlowJitterPixels,
 }
 
 option XNPDistanceRunner.GreenOrbGlowOrbitPixels
 {
-    type = double, min = 0, max = 6, default = 1,
+    type = double, min = 0, max = 6, default = 0,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbGlowOrbitPixels,
 }
 
@@ -2231,7 +2223,7 @@ option XNPDistanceRunner.GreenOrbGlowMinAlpha
 
 option XNPDistanceRunner.GreenOrbGlowMaxAlpha
 {
-    type = double, min = 0, max = 1, default = 0.90,
+    type = double, min = 0, max = 1, default = 0.75,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenOrbGlowMaxAlpha,
 }
 
@@ -2357,7 +2349,7 @@ option XNPDistanceRunner.PurpleBackupRestoreDurationSeconds
 
 option XNPDistanceRunner.YellowAltCrowdBreakoutEnabled
 {
-    type = boolean, default = true,
+    type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowAltCrowdBreakoutEnabled,
 }
 
@@ -2387,7 +2379,7 @@ option XNPDistanceRunner.YellowAltCrowdBreakoutEnduranceCost
 
 option XNPDistanceRunner.YellowAltCrowdBreakoutStrongControlOverride
 {
-    type = boolean, default = true,
+    type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowAltCrowdBreakoutStrongControlOverride,
 }
 
@@ -2399,7 +2391,7 @@ option XNPDistanceRunner.YellowAltCrowdBreakoutLowEnduranceMultiplier
 
 option XNPDistanceRunner.YellowAltCrowdBreakoutNotification
 {
-    type = boolean, default = true,
+    type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowAltCrowdBreakoutNotification,
 }
 
@@ -2434,8 +2426,212 @@ option XNPDistanceRunner.RedCraftExertionFeedbackEnabled
     page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftExertionFeedbackEnabled,
 }
 
+option XNPDistanceRunner.GreenTargetFeedbackMode
+{
+    type = integer, min = 0, max = 2, default = 0,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenTargetFeedbackMode,
+}
+
+option XNPDistanceRunner.GreenBloomCoreDiameterPx
+{
+    type = integer, min = 20, max = 42, default = 32,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomCoreDiameterPx,
+}
+
+option XNPDistanceRunner.GreenBloomRingDiameterPx
+{
+    type = integer, min = 28, max = 96, default = 48,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomRingDiameterPx,
+}
+
+option XNPDistanceRunner.GreenBloomGlowDiameterPx
+{
+    type = integer, min = 40, max = 144, default = 72,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomGlowDiameterPx,
+}
+
+option XNPDistanceRunner.GreenBloomScalePercent
+{
+    type = integer, min = 50, max = 200, default = 100,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomScalePercent,
+}
+
+option XNPDistanceRunner.GreenBloomPulseHz
+{
+    type = double, min = 0.20, max = 2.0, default = 0.85,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomPulseHz,
+}
+
+option XNPDistanceRunner.GreenBloomGlowMinAlpha
+{
+    type = double, min = 0.10, max = 0.60, default = 0.22,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomGlowMinAlpha,
+}
+
+option XNPDistanceRunner.GreenBloomGlowMaxAlpha
+{
+    type = double, min = 0.10, max = 0.75, default = 0.42,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomGlowMaxAlpha,
+}
+
+option XNPDistanceRunner.GreenBloomTrailEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomTrailEnabled,
+}
+
+option XNPDistanceRunner.GreenBloomTrailSegments
+{
+    type = integer, min = 0, max = 3, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomTrailSegments,
+}
+
+option XNPDistanceRunner.GreenBloomReducedFlashing
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenBloomReducedFlashing,
+}
+
+option XNPDistanceRunner.XNPVisualQualityPreset
+{
+    type = enum, numValues = 4, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_XNPVisualQualityPreset,
+    valueTranslation = XNPDistanceRunner_XNPVisualQualityPreset,
+}
+
+option XNPDistanceRunner.YellowMomentumRingEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowMomentumRingEnabled,
+}
+
+option XNPDistanceRunner.YellowContactImpactVFXEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowContactImpactVFXEnabled,
+}
+
+option XNPDistanceRunner.YellowAltCrowdBreakoutTestPresetEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_YellowAltCrowdBreakoutTestPresetEnabled,
+}
+
+option XNPDistanceRunner.PurplePhoenixWorldBloomEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurplePhoenixWorldBloomEnabled,
+}
+
+option XNPDistanceRunner.PurplePhoenixInvulnerabilityRingEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurplePhoenixInvulnerabilityRingEnabled,
+}
+
+option XNPDistanceRunner.PurpleLifeStockTooltipSummaryEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_PurpleLifeStockTooltipSummaryEnabled,
+}
+
+option XNPDistanceRunner.RedPhysicalLoadRingEnabled
+{
+    type = boolean, default = false,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedPhysicalLoadRingEnabled,
+}
+
+option XNPDistanceRunner.RedCraftPhysicalLoadDurationSeconds
+{
+    type = double, min = 1, max = 120, default = 20,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftPhysicalLoadDurationSeconds,
+}
+
+option XNPDistanceRunner.RedCraftPhysicalLoadStackLimit
+{
+    type = enum, numValues = 3, default = 3,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftPhysicalLoadStackLimit,
+    valueTranslation = XNPDistanceRunner_RedCraftPhysicalLoadStackLimit,
+}
+
+option XNPDistanceRunner.RedCraftHeatFeedbackIntensity
+{
+    type = enum, numValues = 3, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftHeatFeedbackIntensity,
+    valueTranslation = XNPDistanceRunner_RedCraftHeatFeedbackIntensity,
+}
+
+option XNPDistanceRunner.RedCraftExertionFeedbackIntensity
+{
+    type = enum, numValues = 3, default = 2,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftExertionFeedbackIntensity,
+    valueTranslation = XNPDistanceRunner_RedCraftExertionFeedbackIntensity,
+}
+
+option XNPDistanceRunner.RedCraftMinimumVisibleFeedbackMode
+{
+    type = enum, numValues = 3, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftMinimumVisibleFeedbackMode,
+    valueTranslation = XNPDistanceRunner_RedCraftMinimumVisibleFeedbackMode,
+}
+
 option XNPDistanceRunner.DeveloperTestToolsEnabled
 {
     type = boolean, default = false,
     page = XNPDistanceRunner, translation = XNPDistanceRunner_DeveloperTestToolsEnabled,
+}
+
+option XNPDistanceRunner.GeneralGameplayPreset
+{
+    type = enum, numValues = 2, default = 1,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GeneralGameplayPreset,
+    valueTranslation = XNPDistanceRunner_GeneralGameplayPreset,
+}
+
+option XNPDistanceRunner.GreenContinuousRollingCastEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenContinuousRollingCastEnabled,
+}
+
+option XNPDistanceRunner.GreenRollingCastRetainedCount
+{
+    type = integer, min = 1, max = 20, default = 19,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenRollingCastRetainedCount,
+}
+
+option XNPDistanceRunner.GreenRollingCastEvictOldestEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_GreenRollingCastEvictOldestEnabled,
+}
+
+option XNPDistanceRunner.RedCraftImmediateFullSweatEnabled
+{
+    type = boolean, default = true,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftImmediateFullSweatEnabled,
+}
+
+option XNPDistanceRunner.RedCraftImmediateSweatPercent
+{
+    type = integer, min = 0, max = 100, default = 100,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftImmediateSweatPercent,
+}
+
+option XNPDistanceRunner.RedCraftImmediateTemperatureIncreaseC
+{
+    type = double, min = 0, max = 1.5, default = 0.5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftImmediateTemperatureIncreaseC,
+}
+
+option XNPDistanceRunner.RedCraftMaximumBodyTemperatureC
+{
+    type = double, min = 37, max = 40, default = 38.5,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftMaximumBodyTemperatureC,
+}
+
+option XNPDistanceRunner.RedCraftImmediateEnduranceTargetPercent
+{
+    type = integer, min = 5, max = 50, default = 10,
+    page = XNPDistanceRunner, translation = XNPDistanceRunner_RedCraftImmediateEnduranceTargetPercent,
 }
