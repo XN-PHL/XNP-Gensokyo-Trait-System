@@ -235,7 +235,7 @@ local function microNudge(player, entry, strength)
 end
 
 local function notify(player, key, fallback)
-    if boolean("YellowAltCrowdBreakoutNotification", true) ~= true then
+    if boolean("YellowAltCrowdBreakoutNotification", false) ~= true then
         return
     end
     local text = fallback
@@ -253,7 +253,7 @@ function Breakout.Update(player)
     local pressed = down and not Breakout.lastRunKeyDown
     Breakout.lastRunKeyDown = down
     if not pressed then return false, "NO_INPUT_EDGE" end
-    if boolean("YellowAltCrowdBreakoutEnabled", true) ~= true then
+    if boolean("YellowAltCrowdBreakoutEnabled", false) ~= true then
         return false, "DISABLED"
     end
     if not Core.Trait or Core.Trait.PlayerHasTrait(player) ~= true then
@@ -279,7 +279,7 @@ function Breakout.Update(player)
         and Core.DragdownDangerClassifier.GetState
         and Core.DragdownDangerClassifier.GetState() or nil
     local controlled = boolean(
-        "YellowAltCrowdBreakoutStrongControlOverride", true)
+        "YellowAltCrowdBreakoutStrongControlOverride", false)
         and strongControl(danger)
     local dangerLevel = danger and tostring(danger.level) or "SAFE"
     local ordinarySurround = #targets >= minimum
