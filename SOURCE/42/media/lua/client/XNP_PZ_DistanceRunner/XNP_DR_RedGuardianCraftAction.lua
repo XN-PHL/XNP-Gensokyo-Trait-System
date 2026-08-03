@@ -87,14 +87,19 @@ function XNPRedGuardianCraftAction:complete()
         clear(self)
         return false
     end
+    local red = module()
+    local ok, reason, transactionInfo = red.CommitCraft(self.character)
     local feedback = XNP_PZ_DistanceRunner
         and XNP_PZ_DistanceRunner.RedCraftFeedback or nil
-    if feedback and type(feedback.Settle) == "function" then
-        feedback.Settle(self, self.character, true)
+    if ok and feedback and type(feedback.MarkCommitted) == "function" then
+        feedback.MarkCommitted(self, self.character, transactionInfo)
+    elseif not ok and feedback and type(feedback.CancelFailedCommit) == "function" then
+        feedback.CancelFailedCommit(self)
     end
-    local red = module()
-    local ok, reason = red.CommitCraft(self.character)
-    if not ok then print("[XNP RED CRAFT] complete=false reason=" .. tostring(reason) .. " costs_applied=false item_created=false") end
+    if not ok then
+        print("[XNP RED CRAFT] complete=false reason=" .. tostring(reason)
+            .. " costs_applied=false item_created=false")
+    end
     self.completionResult = ok == true
     clear(self)
     return self.completionResult
