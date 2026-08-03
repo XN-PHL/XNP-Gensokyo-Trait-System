@@ -16,7 +16,6 @@ local Proxy = {
 }
 
 function Proxy.Preflight()
-    if Proxy.preflight then return Proxy.preflight end
     local smooth = Core.GreenSmoothVisual.Preflight()
     Proxy.preflight = {
         smoothReady = smooth.ready == true,
@@ -38,9 +37,17 @@ function Proxy.Create(state)
     local active, method = Core.GreenSmoothVisual.Activate(state)
     if not active then return false, method end
     state.visibleProxy = { kind = "FLIGHT", drawProofPending = true }
+    local styleName = state.visualOptions and Core.GreenSmoothVisual.VISUAL_STYLE_NAMES
+        and Core.GreenSmoothVisual.VISUAL_STYLE_NAMES[state.visualOptions.visualStyle]
+        or "UNKNOWN"
+    local coreOnly = styleName == "CORE_ONLY_PROJECTILE"
     print("[XNP GREEN VISUAL] created=true draw_proof_pending=true route=" .. Proxy.ROUTE
-        .. " layers=PULSING_GLOW>ROTATING_ENERGY_CORE>ROUND_ORB_CENTER"
-        .. " outer_ground_ring=false trail=false max_draw_calls_per_orb=4")
+        .. " style=" .. tostring(styleName)
+        .. " layers=" .. tostring(coreOnly and "ROUND_ORB_CORE_ONLY"
+            or "LEGACY_COMPATIBILITY_STYLE")
+        .. " crosshair=false target_reticle=false trail_segments_max="
+        .. tostring(coreOnly and 0 or 2)
+        .. " max_draw_calls_per_orb=" .. tostring(coreOnly and 1 or 5))
     return true, method
 end
 
@@ -96,7 +103,7 @@ function Proxy.Cleanup(state)
     print("[XNP GREEN TRACK] smooth_render_frames=" .. tostring(state.smoothVisualFrames or 0)
         .. " visual_granularity=" .. Proxy.TRACKING_VISUAL_GRANULARITY)
     print("[XNP GREEN VISUAL] projectile_removed=true timed_impact_preserved="
-        .. tostring(preserveTimedImpact) .. " no_trail=true")
+        .. tostring(preserveTimedImpact) .. " trail_records_removed=true")
     return true, "CAST_VISUAL_CLEANED"
 end
 
