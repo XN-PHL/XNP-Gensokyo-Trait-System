@@ -123,13 +123,25 @@ local function dragAudit(finished, persisted, reason)
         .. " reason=" .. tostring(reason or "POSITION_ONLY"))
 end
 
-local function inputLog(button, clickCount, dragDistance, route, accepted, reason)
+local function inputLog(button, clickCount, dragDistance, route, accepted, reason, snapshot)
+    snapshot = snapshot or {}
     PurpleUI.inputSequence = PurpleUI.inputSequence + 1
     print("[XNP PURPLE ICON INPUT] sequence="
         .. tostring(PurpleUI.inputSequence)
         .. " button=" .. tostring(button)
         .. " click_count=" .. tostring(clickCount)
         .. " drag_distance=" .. string.format("%.2f", tonumber(dragDistance) or 0)
+        .. " down_screen=" .. tostring(snapshot.down_screen_x) .. ","
+        .. tostring(snapshot.down_screen_y)
+        .. " down_local=" .. tostring(snapshot.down_local_x) .. ","
+        .. tostring(snapshot.down_local_y)
+        .. " up_screen=" .. tostring(snapshot.up_screen_x) .. ","
+        .. tostring(snapshot.up_screen_y)
+        .. " up_local=" .. tostring(snapshot.up_local_x) .. ","
+        .. tostring(snapshot.up_local_y)
+        .. " move_count=" .. tostring(snapshot.move_count or 0)
+        .. " distance_same_space="
+        .. string.format("%.2f", tonumber(snapshot.distance_same_space) or 0)
         .. " route=" .. tostring(route)
         .. " accepted=" .. tostring(accepted == true)
         .. " reject_reason=" .. tostring(reason or "NONE"))
@@ -204,15 +216,12 @@ end
 
 function Panel:onMouseMove(dx, dy)
     if Drag.IsDragging(self) then
-        local mx, my = getMouseX(), getMouseY()
-        if distanceSquared(mx, my, PurpleUI.pressX, PurpleUI.pressY)
-            > DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX then
+        local moved = Drag.Move(self)
+        local snapshot = Drag.GetInputSnapshot(self, nil, nil)
+        PurpleUI.dragMoveCount = snapshot and snapshot.move_count or 0
+        if snapshot and snapshot.is_drag == true then
             PurpleUI.dragMoved = true
             PurpleUI.firstClickMs = 0
-        end
-        local moved = Drag.Move(self)
-        if moved then
-            PurpleUI.dragMoveCount = PurpleUI.dragMoveCount + 1
         end
         return moved
     end
@@ -252,22 +261,23 @@ function Panel:onMouseMove(dx, dy)
 end
 
 function Panel:onMouseUp(x, y)
-    local moved = PurpleUI.dragMoved
-    local mx, my = getMouseX(), getMouseY()
-    local dragDistance = math.sqrt(distanceSquared(
-        mx, my, PurpleUI.pressX, PurpleUI.pressY))
-    local released = Drag.Release(self)
+    local released, snapshot, moved = Drag.Finish(self, x, y)
+    snapshot = snapshot or {}
+    PurpleUI.dragMoveCount = snapshot.move_count or 0
+    local dragDistance = tonumber(snapshot.distance_same_space) or 0
+    local mx = snapshot.up_screen_x or getMouseX()
+    local my = snapshot.up_screen_y or getMouseY()
     if moved then
         PurpleUI.firstClickMs = 0
         dragAudit(true, released, "POSITION_ONLY")
-        inputLog("LEFT", 1, dragDistance, "DRAG", true, "POSITION_ONLY")
+        inputLog("LEFT", 1, dragDistance, "DRAG", true, "POSITION_ONLY", snapshot)
         return released
     end
     local allowed, reason = actionInputAllowed()
     if not allowed or not Frame.PointInside(x, y) then
         PurpleUI.firstClickMs = 0
         inputLog("LEFT", 1, dragDistance, "NONE", false,
-            allowed and "RELEASE_OUTSIDE" or reason)
+            allowed and "RELEASE_OUTSIDE" or reason, snapshot)
         return released
     end
     local now = Frame.NowMs()
@@ -283,36 +293,43 @@ function Panel:onMouseUp(x, y)
             ok, queueReason = tx.QueueCraft(
                 PurpleUI.player, "PURPLE_ICON_LEFT_DOUBLE_CLICK")
         end
-        inputLog("LEFT", 2, dragDistance, "CRAFT", ok == true, queueReason)
+        inputLog("LEFT", 2, dragDistance, "CRAFT", ok == true, queueReason, snapshot)
         return true
     end
     PurpleUI.firstClickMs = now
     PurpleUI.firstClickX = mx
     PurpleUI.firstClickY = my
     inputLog("LEFT", 1, dragDistance, "NONE", true,
-        "WAITING_FOR_OPTIONAL_SECOND_CLICK")
+        "WAITING_FOR_OPTIONAL_SECOND_CLICK", snapshot)
     return released
 end
 
 function Panel:onMouseMoveOutside(dx, dy)
     Tooltip.Hide("PURPLE_BACKUP_MOUSE_OUT")
-    if Drag.IsDragging(self) then
+    local moved = Drag.Move(self)
+    local snapshot = Drag.GetInputSnapshot(self, nil, nil)
+    PurpleUI.dragMoveCount = snapshot and snapshot.move_count or 0
+    if snapshot and snapshot.is_drag == true then
         PurpleUI.dragMoved = true
         PurpleUI.firstClickMs = 0
     end
-    local moved = Drag.Move(self)
-    if moved then PurpleUI.dragMoveCount = PurpleUI.dragMoveCount + 1 end
     return moved
 end
 
 function Panel:onMouseUpOutside(x, y)
-    local mx, my = getMouseX(), getMouseY()
-    local distance = math.sqrt(distanceSquared(
-        mx, my, PurpleUI.pressX, PurpleUI.pressY))
     PurpleUI.firstClickMs = 0
-    local released = Drag.Release(self)
-    dragAudit(true, released, "RELEASE_OUTSIDE")
-    inputLog("LEFT", 1, distance, "DRAG", true, "RELEASE_OUTSIDE")
+    local released, snapshot, moved = Drag.Finish(self, x, y)
+    snapshot = snapshot or {}
+    PurpleUI.dragMoveCount = snapshot.move_count or 0
+    local distance = tonumber(snapshot.distance_same_space) or 0
+    if moved then
+        dragAudit(true, released, "RELEASE_OUTSIDE_POSITION_ONLY")
+        inputLog("LEFT", 1, distance, "DRAG", true,
+            "RELEASE_OUTSIDE_POSITION_ONLY", snapshot)
+    else
+        inputLog("LEFT", 1, 0, "NONE", false,
+            "RELEASE_OUTSIDE_NO_DRAG", snapshot)
+    end
     return released
 end
 
