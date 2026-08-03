@@ -1,7 +1,9 @@
 require "XNP_PZ_DistanceRunner/XNP_DR_Constants"
+require "XNP_PZ_DistanceRunner/XNP_DR_StableInputSelfCheck"
 require "XNP_PZ_DistanceRunner/XNP_DR_Audio"
 require "XNP_PZ_DistanceRunner/XNP_DR_Config"
 require "XNP_PZ_DistanceRunner/XNP_DR_SandboxTuning"
+require "XNP_PZ_DistanceRunner/XNP_DR_VFXManager"
 require "XNP_PZ_DistanceRunner/XNP_DR_CostTuning"
 require "XNP_PZ_DistanceRunner/XNP_DR_Log"
 require "XNP_PZ_DistanceRunner/XNP_DR_LogThrottle"
@@ -59,7 +61,11 @@ require "XNP_PZ_DistanceRunner/XNP_DR_ExtraTraits"
 require "XNP_PZ_DistanceRunner/XNP_DR_TraitStateCache"
 require "XNP_PZ_DistanceRunner/XNP_DR_GreenSkillUI"
 require "XNP_PZ_DistanceRunner/XNP_DR_RedMagicUI"
+require "XNP_PZ_DistanceRunner/XNP_DR_RedPhysicalLoad"
+require "XNP_PZ_DistanceRunner/XNP_DR_RedCraftFeedback"
 require "XNP_PZ_DistanceRunner/XNP_DR_TestBuildNotice"
+require "XNP_PZ_DistanceRunner/XNP_DR_B42_20_RuntimeDiagnostic"
+require "XNP_PZ_DistanceRunner/XNP_DR_ConfigHealthUI"
 require "XNP_PZ_DistanceRunner/XNP_DR_DeveloperTestTools"
 
 local Core = XNP_PZ_DistanceRunner
@@ -138,6 +144,15 @@ function Runtime.RebuildTraitUI(player, reason, state)
 end
 
 function Runtime.RefreshTraitState(player, reason, rebuild)
+    if reason and Core.PurpleLifeStockSnapshot
+        and type(Core.PurpleLifeStockSnapshot.RepairTraitMultiplicity) == "function" then
+        local repairOk, repaired, repairReason = pcall(
+            Core.PurpleLifeStockSnapshot.RepairTraitMultiplicity, player, reason)
+        if not repairOk or repaired ~= true then
+            print("[XNP TRAIT MULTIPLICITY REPAIR] result=FAILED reason="
+                .. tostring(repairOk and repairReason or repaired))
+        end
+    end
     if reason then Runtime.InvalidateTraitState(reason) end
     if not Core.TraitStateCache then
         return nil, false, false
@@ -186,6 +201,7 @@ local HIGH_RISK_BOUNDARY = {
     BREAKOUT_PUSH = true,
     RED_GUARDIAN_STARTER_GRANT = true,
     RED_MAGIC_UI_LOW_FREQUENCY = true,
+    RED_PHYSICAL_LOAD = true,
     GREEN_WORLD_ORB = true,
     GREEN_STRUCTURE_DAMAGE = true,
 }
@@ -437,6 +453,12 @@ function Runtime.Update(eventPlayer)
     local greenActive = greenSystemEnabled and traitState.green == true
     local redActive = redSystemEnabled and traitState.red == true
 
+    if Core.RedPhysicalLoad then
+        runPart("RED_PHYSICAL_LOAD", function()
+            Core.RedPhysicalLoad.Update(player)
+        end)
+    end
+
     if phoenixActive and Core.PurplePhoenixRevive then
         runPart("PHOENIX_SURVIVAL", function()
             Core.PurplePhoenixRevive.PreUpdate(player)
@@ -614,10 +636,14 @@ function Runtime.Cleanup(reason, explicitPlayer)
             Core.YellowAltCrowdBreakout.Cleanup(reason or "player_death")
         end
         if Core.GreenWorldOrb then Core.GreenWorldOrb.Shutdown(reason or "player_death") end
+        if Core.VFXManager then Core.VFXManager.Cleanup(nil, reason or "player_death") end
         if Core.StatusIconUI then Core.StatusIconUI.Cleanup(reason or "player_death") end
         if Core.PurplePhoenixUI then Core.PurplePhoenixUI.Cleanup(reason or "player_death") end
         if Core.GreenSkillUI then Core.GreenSkillUI.Cleanup(reason or "player_death") end
         if Core.RedMagicUI then Core.RedMagicUI.Cleanup(reason or "player_death") end
+        if Core.RedPhysicalLoad then
+            Core.RedPhysicalLoad.Cleanup(reason or "player_death", player)
+        end
         if Core.RoundMarkerTooltip then Core.RoundMarkerTooltip.Cleanup(reason or "player_death") end
         if Core.RoundMarkerMapVisibility then Core.RoundMarkerMapVisibility.Cleanup(reason or "player_death") end
         if Core.PurpleLifeStockController then
@@ -701,6 +727,9 @@ function Runtime.Cleanup(reason, explicitPlayer)
     if Core.GreenWorldOrb then
         Core.GreenWorldOrb.Shutdown(reason or "cleanup")
     end
+    if Core.VFXManager then
+        Core.VFXManager.Cleanup(nil, reason or "cleanup")
+    end
     if Core.GreenWhiteAction then
         Core.GreenWhiteAction.Cleanup(player)
     end
@@ -716,6 +745,9 @@ function Runtime.Cleanup(reason, explicitPlayer)
     if Core.RedMagicUI then
         Core.RedMagicUI.Cleanup(reason or "cleanup")
     end
+    if Core.RedPhysicalLoad then
+        Core.RedPhysicalLoad.Cleanup(reason or "cleanup", player)
+    end
     if Core.RedGuardianMark then
         Core.RedGuardianMark.Cleanup(reason or "cleanup")
     end
@@ -730,16 +762,36 @@ function Runtime.Cleanup(reason, explicitPlayer)
     end
 end
 
-if not Core.runtime_0560730_startup_logged then
-    Core.runtime_0560730_startup_logged = true
-    print("[XNP TEST BUILD] BUILD_MARKER=XNP_V2_210_TEST1_IMPROVEMENTS_A runtime_entry_loaded=true"
+if not Core.runtime_v2_220_startup_logged then
+    Core.runtime_v2_220_startup_logged = true
+    print("[XNP RUNTIME] VERSION=" .. tostring(Constants.VERSION)
+        .. " BUILD_MARKER=" .. tostring(Constants.BUILD_ID)
+        .. " channel=" .. tostring(Constants.RELEASE_CHANNEL)
+        .. " runtime_entry_loaded=true"
         .. " purple_shared_input=true trait_object_restore=true"
         .. " right_click_toggle=true left_double_click_craft=true"
         .. " paused_drag=true post_restore_rebind=true"
         .. " purple_authoritative_mode=true auto_rearm=false"
-        .. " red_visible_mood_notice=true"
+        .. " red_mood_direction=DECREASE red_halo_created=false"
+        .. " red_physical_load=POST_COMMIT_BOUNDED_NATIVE_PULSE"
         .. " predeath_intercept=true false_success_guard=true"
         .. " invulnerability=CANONICAL_0_TO_30_DEFAULT_10")
+end
+
+if not Core.red_physical_load_self_check_logged then
+    Core.red_physical_load_self_check_logged = true
+    local load = Core.RedPhysicalLoad
+    local feedback = Core.RedCraftFeedback
+    local moduleOk = type(load) == "table"
+    local startOk = moduleOk and type(load.start) == "function"
+    local bindingOk = type(feedback) == "table"
+        and type(feedback.GetPhysicalLoadModuleForAudit) == "function"
+        and feedback.GetPhysicalLoadModuleForAudit() == load
+    print("[XNP RED PHYSICAL LOAD SELF CHECK]"
+        .. " parse_ok=" .. tostring(moduleOk)
+        .. " module_ok=" .. tostring(moduleOk)
+        .. " start_function_ok=" .. tostring(startOk)
+        .. " craft_feedback_binding_ok=" .. tostring(bindingOk))
 end
 
 Core.Runtime = Runtime
