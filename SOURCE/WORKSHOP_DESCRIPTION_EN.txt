@@ -1,0 +1,6 @@
+XNP Gensokyo Trait System V2 | Build 42.20 Test 2.2.0-test.8
+
+This is the isolated test channel with Mod ID XNP_PZ_DistanceRunnerTrait_Test.
+Do not enable it together with the stable XNP_PZ_DistanceRunnerTrait channel.
+Diagnostics, test tools, and development bypasses are disabled by default.
+This build restores the Green one-second random burst. The first projectile follows player-forward heading; continuation casts accepted within 1000 ms launch from the player's current position in independent random world directions. One five-second cooldown belongs to the burst and is not extended by continuation casts. Every projectile keeps independent cost, sound, dynamic-light, and cleanup ownership. Default Style 6 displays only the green core with no flight ring, rotation, glow, trail, reticle, or target outline. Guidance is 150 degrees per second and reaches the existing speed cap of 8 in 4.5 seconds. Other Green mechanics plus Yellow, Purple, and Red remain frozen. Offline audits pass; runtime status remains NOT_TESTED.
