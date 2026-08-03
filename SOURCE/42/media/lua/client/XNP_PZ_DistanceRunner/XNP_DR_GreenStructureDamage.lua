@@ -1,3 +1,10 @@
+local XNPChannelGuard = require "XNP_PZ_DistanceRunner/XNP_DR_ChannelGuard"
+if type(XNPChannelGuard) == "table"
+    and type(XNPChannelGuard.allowRuntime) == "function"
+    and not XNPChannelGuard.allowRuntime() then
+    return
+end
+
 require "XNP_PZ_DistanceRunner/XNP_DR_ExtraTraits"
 require "XNP_PZ_DistanceRunner/XNP_DR_GreenSkill"
 require "XNP_PZ_DistanceRunner/XNP_DR_MeleeMode"
