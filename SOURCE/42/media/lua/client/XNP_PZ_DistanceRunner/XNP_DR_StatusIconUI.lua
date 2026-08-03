@@ -38,6 +38,19 @@ local SHAKE_PROFILES = {
     RED = { ampX = 2.8, ampY = 2.0, speed = 0.26 },
 }
 
+local function inputLog(snapshot, route, result)
+    snapshot = snapshot or {}
+    print("[XNP YELLOW POINTER INPUT]"
+        .. " down_screen=" .. tostring(snapshot.down_screen_x) .. "," .. tostring(snapshot.down_screen_y)
+        .. " up_screen=" .. tostring(snapshot.up_screen_x) .. "," .. tostring(snapshot.up_screen_y)
+        .. " down_local=" .. tostring(snapshot.down_local_x) .. "," .. tostring(snapshot.down_local_y)
+        .. " up_local=" .. tostring(snapshot.up_local_x) .. "," .. tostring(snapshot.up_local_y)
+        .. " move_count=" .. tostring(snapshot.move_count or 0)
+        .. " distance_same_space=" .. tostring(snapshot.distance_same_space or 0)
+        .. " route=" .. tostring(route)
+        .. " result=" .. tostring(result))
+end
+
 local function loadPosition(player, panel)
     if StatusIconUI.loadedPosition and StatusIconUI.player == player then return end
     StatusIconUI.player = player
@@ -66,7 +79,9 @@ function Panel:onMouseMove(dx, dy)
 end
 
 function Panel:onMouseUp(x, y)
-    return Drag.Release(self)
+    local released, snapshot, moved = Drag.Finish(self, x, y)
+    inputLog(snapshot, "LEFT_RELEASE", moved and "DRAG" or "CLICK")
+    return released
 end
 
 function Panel:onMouseMoveOutside(dx, dy)
@@ -75,7 +90,9 @@ function Panel:onMouseMoveOutside(dx, dy)
 end
 
 function Panel:onMouseUpOutside(x, y)
-    return Drag.Release(self)
+    local released, snapshot, moved = Drag.Finish(self, x, y)
+    inputLog(snapshot, "LEFT_RELEASE_OUTSIDE", moved and "DRAG" or "RELEASE_OUTSIDE_NO_DRAG")
+    return released
 end
 
 function Panel:onKeyRelease(key)
