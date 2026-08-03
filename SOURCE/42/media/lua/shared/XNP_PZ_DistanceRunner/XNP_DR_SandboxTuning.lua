@@ -2,12 +2,25 @@ require "XNP_PZ_DistanceRunner/XNP_DR_Constants"
 require "XNP_PZ_DistanceRunner/XNP_DR_Config"
 require "XNP_PZ_DistanceRunner/XNP_DR_LogThrottle"
 require "XNP_PZ_DistanceRunner/XNP_DR_SandboxSchema"
+require "XNP_PZ_DistanceRunner/XNP_DR_SandboxClassification"
+require "XNP_PZ_DistanceRunner/XNP_DR_SandboxCanonicalMigration"
+require "XNP_PZ_DistanceRunner/XNP_DR_RedPhysicalFeedbackMigration"
+require "XNP_PZ_DistanceRunner/XNP_DR_Test6VisualMigration"
+require "XNP_PZ_DistanceRunner/XNP_DR_Test7RepairMigration"
+require "XNP_PZ_DistanceRunner/XNP_DR_Test8GreenMigration"
+require "XNP_PZ_DistanceRunner/XNP_DR_DeveloperBypassGate"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleInvulnerabilityResolver"
 
 local Core = XNP_PZ_DistanceRunner
 local Constants = Core.Constants
 local Config = Core.Config
 local Schema = Core.SandboxSchema
+local CanonicalMigration = Core.SandboxCanonicalMigration
+local RedPhysicalFeedbackMigration = Core.RedPhysicalFeedbackMigration
+local Test6VisualMigration = Core.Test6VisualMigration
+local Test7RepairMigration = Core.Test7RepairMigration
+local Test8GreenMigration = Core.Test8GreenMigration
+local DeveloperBypassGate = Core.DeveloperBypassGate
 
 local SandboxTuning = {
     namespace = "XNPDistanceRunner",
@@ -93,14 +106,27 @@ local Release = {
     RedCraftFatigueCostPercent = 10,
     RedCraftBodyHeatEnabled = true,
     RedCraftExertionFeedbackEnabled = true,
-    YellowAltCrowdBreakoutEnabled = true,
+    RedCraftPhysicalLoadDurationSeconds = 20,
+    RedCraftPhysicalLoadStackLimit = 3,
+    RedCraftHeatFeedbackIntensity = 2,
+    RedCraftExertionFeedbackIntensity = 2,
+    RedCraftMinimumVisibleFeedbackMode = 1,
+    GreenContinuousRollingCastEnabled = true,
+    GreenRollingCastRetainedCount = 19,
+    GreenRollingCastEvictOldestEnabled = true,
+    RedCraftImmediateFullSweatEnabled = true,
+    RedCraftImmediateSweatPercent = 100,
+    RedCraftImmediateTemperatureIncreaseC = 0.5,
+    RedCraftMaximumBodyTemperatureC = 38.5,
+    RedCraftImmediateEnduranceTargetPercent = 10,
+    YellowAltCrowdBreakoutEnabled = false,
     YellowAltCrowdBreakoutRadiusTiles = 1.75,
     YellowAltCrowdBreakoutMinimumNearbyZombies = 3,
     YellowAltCrowdBreakoutCooldownSeconds = 8,
     YellowAltCrowdBreakoutEnduranceCost = 0.12,
-    YellowAltCrowdBreakoutStrongControlOverride = true,
+    YellowAltCrowdBreakoutStrongControlOverride = false,
     YellowAltCrowdBreakoutLowEnduranceMultiplier = 0.60,
-    YellowAltCrowdBreakoutNotification = true,
+    YellowAltCrowdBreakoutNotification = false,
     DeveloperTestToolsEnabled = false,
     RedSafetyFloorPercent = 20,
     RedStaminaImmediateRecovery = 0.50,
@@ -177,14 +203,27 @@ local Testing = {
     RedCraftFatigueCostPercent = 10,
     RedCraftBodyHeatEnabled = true,
     RedCraftExertionFeedbackEnabled = true,
-    YellowAltCrowdBreakoutEnabled = true,
+    RedCraftPhysicalLoadDurationSeconds = 20,
+    RedCraftPhysicalLoadStackLimit = 3,
+    RedCraftHeatFeedbackIntensity = 2,
+    RedCraftExertionFeedbackIntensity = 2,
+    RedCraftMinimumVisibleFeedbackMode = 1,
+    GreenContinuousRollingCastEnabled = true,
+    GreenRollingCastRetainedCount = 19,
+    GreenRollingCastEvictOldestEnabled = true,
+    RedCraftImmediateFullSweatEnabled = true,
+    RedCraftImmediateSweatPercent = 100,
+    RedCraftImmediateTemperatureIncreaseC = 0.5,
+    RedCraftMaximumBodyTemperatureC = 38.5,
+    RedCraftImmediateEnduranceTargetPercent = 10,
+    YellowAltCrowdBreakoutEnabled = false,
     YellowAltCrowdBreakoutRadiusTiles = 1.75,
     YellowAltCrowdBreakoutMinimumNearbyZombies = 3,
     YellowAltCrowdBreakoutCooldownSeconds = 8,
     YellowAltCrowdBreakoutEnduranceCost = 0.12,
-    YellowAltCrowdBreakoutStrongControlOverride = true,
+    YellowAltCrowdBreakoutStrongControlOverride = false,
     YellowAltCrowdBreakoutLowEnduranceMultiplier = 0.60,
-    YellowAltCrowdBreakoutNotification = true,
+    YellowAltCrowdBreakoutNotification = false,
     DeveloperTestToolsEnabled = false,
     RedSafetyFloorPercent = 20,
     RedStaminaImmediateRecovery = 0.50,
@@ -264,6 +303,14 @@ local Specs = {
     RedFatigueReduction = { kind = "number", fallback = Release.RedFatigueReduction, min = 0.0, max = 1.0 },
     RedMoodReductionPercent = { kind = "number", fallback = Release.RedMoodReductionPercent, min = 0, max = 100 },
     RedHealingHealthAmount = { kind = "number", fallback = Release.RedHealingHealthAmount, min = 0, max = 100 },
+    GreenContinuousRollingCastEnabled = { kind = "boolean", fallback = true },
+    GreenRollingCastRetainedCount = { kind = "number", fallback = 19, min = 1, max = 20 },
+    GreenRollingCastEvictOldestEnabled = { kind = "boolean", fallback = true },
+    RedCraftImmediateFullSweatEnabled = { kind = "boolean", fallback = true },
+    RedCraftImmediateSweatPercent = { kind = "number", fallback = 100, min = 0, max = 100 },
+    RedCraftImmediateTemperatureIncreaseC = { kind = "number", fallback = 0.5, min = 0, max = 1.5 },
+    RedCraftMaximumBodyTemperatureC = { kind = "number", fallback = 38.5, min = 37, max = 40 },
+    RedCraftImmediateEnduranceTargetPercent = { kind = "number", fallback = 10, min = 5, max = 50 },
     RedHealFractureEnabled = { kind = "boolean", fallback = Release.RedHealFractureEnabled },
     RedClearZombieInfectionEnabled = { kind = "boolean", fallback = Release.RedClearZombieInfectionEnabled },
     RedHealMinorWoundCount = { kind = "number", fallback = Release.RedHealMinorWoundCount, min = 0, max = 20 },
@@ -311,6 +358,27 @@ local AlwaysLiveNames = {
     "GreenVisualMaximumFPS",
     "GreenSimulationUpdatesPerSecond",
     "GreenMaximumVirtualSpeedTilesPerSecond",
+    "GreenRapidCastRandomDirectionEnabled",
+    "GreenRapidCastWindowMs",
+    "GreenAccelerationTimeToMaxSeconds",
+    "GreenGuidanceTurnDegreesPerSecond",
+    "GreenOrbVisualStyle",
+    "GreenTargetOutlineEnabled",
+    "GreenTargetFlashEnabled",
+    "GreenOrbSpinEnabled",
+    "GreenOrbSpinDegreesPerSecond",
+    "GreenTargetFeedbackMode",
+    "GreenBloomCoreDiameterPx",
+    "GreenBloomRingDiameterPx",
+    "GreenBloomGlowDiameterPx",
+    "GreenBloomScalePercent",
+    "GreenBloomPulseHz",
+    "GreenBloomGlowMinAlpha",
+    "GreenBloomGlowMaxAlpha",
+    "GreenBloomTrailEnabled",
+    "GreenBloomTrailSegments",
+    "GreenBloomReducedFlashing",
+    "XNPVisualQualityPreset",
     "PurpleInvulnerabilitySeconds",
     "PurpleCooldownRealSeconds",
     "PurpleLocalZombiePushEnabled",
@@ -324,13 +392,55 @@ local AlwaysLiveNames = {
     "YellowAltCrowdBreakoutStrongControlOverride",
     "YellowAltCrowdBreakoutLowEnduranceMultiplier",
     "YellowAltCrowdBreakoutNotification",
+    "YellowMomentumRingEnabled",
+    "YellowContactImpactVFXEnabled",
+    "YellowAltCrowdBreakoutTestPresetEnabled",
+    "PurplePhoenixWorldBloomEnabled",
+    "PurplePhoenixInvulnerabilityRingEnabled",
+    "PurpleLifeStockTooltipSummaryEnabled",
     "RedCraftSweatEnabled",
     "RedCraftSweatIntensity",
     "RedCraftFatigueCostPercent",
     "RedCraftBodyHeatEnabled",
     "RedCraftExertionFeedbackEnabled",
+    "RedCraftPhysicalLoadDurationSeconds",
+    "RedCraftPhysicalLoadStackLimit",
+    "RedCraftHeatFeedbackIntensity",
+    "RedCraftExertionFeedbackIntensity",
+    "RedCraftMinimumVisibleFeedbackMode",
+    "RedPhysicalLoadRingEnabled",
     "DeveloperTestToolsEnabled",
+    "GeneralGameplayPreset",
 }
+
+local DeveloperBypassNames = {
+    "GreenRuntimeTestModeEnabled",
+    "GreenRuntimeTestNoCooldown",
+    "GreenRuntimeTestIgnoreResourceAdmission",
+    "GreenRuntimeTestAllowCastAtMaxFatigue",
+    "GreenRuntimeTestAllowCastAtZeroEndurance",
+}
+
+local function applyDeveloperBypassGate(values)
+    local isTestChannel = Constants.MOD_ID == Constants.TEST_MOD_ID
+        and Constants.RELEASE_CHANNEL == "B42_20_TEST_WORKSHOP"
+    -- The test-only debug keys have their own explicit SandboxVars controls.
+    -- A preset or unrelated developer-tools toggle must not erase a value the
+    -- current world explicitly selected.
+    local developerTools = values.DeveloperTestToolsEnabled == true
+    local developmentPreset = tonumber(values.GeneralGameplayPreset) == 2
+    for index = 1, #DeveloperBypassNames do
+        local name = DeveloperBypassNames[index]
+        values[name] = isTestChannel and values[name] == true
+    end
+    return {
+        is_test_channel = isTestChannel,
+        developer_tools_enabled = developerTools,
+        general_gameplay_preset = developmentPreset
+            and "DEVELOPMENT_TEST" or "FORMAL_BALANCE",
+        gate_open = isTestChannel,
+    }
+end
 
 local routeKeys = {
     JOG_BUMP = "JogBumpCostMultiplier",
@@ -513,6 +623,9 @@ local ImportantChangeNames = {
     "GreenRuntimeTestAllowCastAtZeroEndurance",
     "GreenCooldownEnabled",
     "GreenCooldownSeconds",
+    "GreenGuidanceTurnDegreesPerSecond",
+    "GreenAccelerationTimeToMaxSeconds",
+    "GreenOrbVisualStyle",
     "PurpleCooldownRealSeconds",
     "PurpleInvulnerabilitySeconds",
     "PurpleLocalZombiePushEnabled",
@@ -551,6 +664,19 @@ end
 
 local function makeSnapshot()
     local vars = sourceVars()
+    local test6VisualMigration = Test6VisualMigration
+        and type(Test6VisualMigration.Apply) == "function"
+        and Test6VisualMigration.Apply(vars) or nil
+    local test7RepairMigration = Test7RepairMigration
+        and type(Test7RepairMigration.Apply) == "function"
+        and Test7RepairMigration.Apply(vars) or nil
+    local test8GreenMigration = Test8GreenMigration
+        and type(Test8GreenMigration.Apply) == "function"
+        and Test8GreenMigration.Apply(vars) or nil
+    local redPhysicalFeedbackMigration = RedPhysicalFeedbackMigration
+        and type(RedPhysicalFeedbackMigration.Apply) == "function"
+        and RedPhysicalFeedbackMigration.Apply(vars) or nil
+    local canonicalMigration = CanonicalMigration.Apply(vars)
     local missingNamespace = vars == nil
     local presetValue = resolvePreset(vars)
     local name = presetName(presetValue)
@@ -635,10 +761,10 @@ local function makeSnapshot()
             values.GreenSimulationUpdatesPerSecond = hzMap[math.floor(rawHz + 0.5)]
             releaseMigration.greenHz = true
         end
-        if name ~= "CUSTOM" and tonumber(vars.GreenMaximumVirtualSpeedTilesPerSecond) == 8 then
-            values.GreenMaximumVirtualSpeedTilesPerSecond = 12
-            releaseMigration.greenVirtualCap = true
-        end
+        -- A raw value equal to an old default does not prove provenance.
+        -- Preserve it unless the canonical migration layer has explicit
+        -- per-source evidence.
+        releaseMigration.greenVirtualCap = false
         -- V2 treats an explicit false as authoritative. The old profile
         -- migration must not silently re-enable the push behind the Sandbox UI.
         releaseMigration.purplePushDefault = false
@@ -666,6 +792,7 @@ local function makeSnapshot()
     values.Preset = presetValue
     applySafetyLocks(values)
     applyAliases(values)
+    local developerBypass = applyDeveloperBypassGate(values)
     local normalized = normalizeThresholds(values)
     local hash = buildHash(values)
     return {
@@ -690,6 +817,12 @@ local function makeSnapshot()
         greenLifetimeAliasSource = greenLifetimeAliasSource,
         greenDuplicateTargetMigratedFalse = true,
         purpleInvulnerability = purpleInvulnerability,
+        canonicalMigration = canonicalMigration,
+        redPhysicalFeedbackMigration = redPhysicalFeedbackMigration,
+        test6VisualMigration = test6VisualMigration,
+        test7RepairMigration = test7RepairMigration,
+        test8GreenMigration = test8GreenMigration,
+        developerBypass = developerBypass,
         releaseMigration = releaseMigration,
     }
 end
@@ -712,6 +845,20 @@ local function printGreenSummary(snapshot, source)
         .. " cooldown_enabled=" .. tostring(values.GreenCooldownEnabled == true)
         .. " cooldown_seconds=" .. tostring(values.GreenCooldownSeconds)
         .. " debug_summary=" .. tostring(values.EnableDebugSummary == true))
+    local raw = sourceVars() or {}
+    print("[XNP GREEN DEBUG CONFIG]"
+        .. " raw_runtime_test=" .. tostring(raw.GreenRuntimeTestModeEnabled)
+        .. " raw_ignore_admission=" .. tostring(raw.GreenRuntimeTestIgnoreResourceAdmission)
+        .. " raw_allow_zero=" .. tostring(raw.GreenRuntimeTestAllowCastAtZeroEndurance)
+        .. " raw_allow_max_fatigue=" .. tostring(raw.GreenRuntimeTestAllowCastAtMaxFatigue)
+        .. " raw_still_apply_costs=" .. tostring(raw.GreenRuntimeTestStillApplyCosts)
+        .. " effective_runtime_test=" .. tostring(values.GreenRuntimeTestModeEnabled == true)
+        .. " effective_ignore_admission=" .. tostring(values.GreenRuntimeTestIgnoreResourceAdmission == true)
+        .. " effective_allow_zero=" .. tostring(values.GreenRuntimeTestAllowCastAtZeroEndurance == true)
+        .. " effective_allow_max_fatigue=" .. tostring(values.GreenRuntimeTestAllowCastAtMaxFatigue == true)
+        .. " effective_still_apply_costs=" .. tostring(values.GreenRuntimeTestStillApplyCosts == true)
+        .. " source_layer=CURRENT_WORLD_SANDBOX_VARS"
+        .. " preset=" .. tostring(snapshot and snapshot.preset or "UNKNOWN"))
 end
 
 local function applyToConfig(snapshot)
@@ -740,6 +887,17 @@ local function applyToConfig(snapshot)
     Config.XNP_MARKER_UPDATE_INTERVAL_FRAMES = v.MarkerUpdateIntervalFrames
     Config.XNP_TOOLTIP_ENABLED = v.EnableTooltips == true and v.TooltipEnabled == true
     Config.XNP_TOOLTIP_DETAIL_LEVEL = v.TooltipDetailLevel
+    Config.XNP_VISUAL_QUALITY_PRESET = v.XNPVisualQualityPreset
+    Config.GREEN_TARGET_FEEDBACK_MODE = v.GreenTargetFeedbackMode
+    Config.GREEN_BLOOM_REDUCED_FLASHING = v.GreenBloomReducedFlashing == true
+    Config.YELLOW_MOMENTUM_RING_ENABLED = v.YellowMomentumRingEnabled == true
+    Config.YELLOW_CONTACT_IMPACT_VFX_ENABLED = v.YellowContactImpactVFXEnabled == true
+    Config.PURPLE_PHOENIX_WORLD_BLOOM_ENABLED = v.PurplePhoenixWorldBloomEnabled == true
+    Config.PURPLE_PHOENIX_INVULNERABILITY_RING_ENABLED =
+        v.PurplePhoenixInvulnerabilityRingEnabled == true
+    Config.PURPLE_LIFE_STOCK_TOOLTIP_SUMMARY_ENABLED =
+        v.PurpleLifeStockTooltipSummaryEnabled == true
+    Config.RED_PHYSICAL_LOAD_RING_ENABLED = v.RedPhysicalLoadRingEnabled == true
 
     local yellowEnabled = v.EnableYellowTraitSystem == true and v.YellowEnabled == true
     Config.ENABLE_BREAKOUT_PUSH = yellowEnabled
@@ -771,8 +929,11 @@ local function applyToConfig(snapshot)
     Config.YELLOW_DISTANCE_DECAY_RATE = v.YellowDecayRate
     Config.YELLOW_LOW_ENDURANCE_INJURY_RISK_ENABLED = v.YellowLowEnduranceInjuryRiskEnabled == true
     Config.YELLOW_LOW_ENDURANCE_INJURY_CHANCE = v.YellowLowEnduranceInjuryChance
-    Config.YELLOW_ALT_CROWD_BREAKOUT_ENABLED =
-        yellowEnabled and v.YellowAltCrowdBreakoutEnabled == true
+    local yellowAltTestPreset = v.YellowAltCrowdBreakoutTestPresetEnabled == true
+        and tonumber(v.GeneralGameplayPreset) == 2
+    Config.YELLOW_ALT_CROWD_BREAKOUT_ENABLED = yellowEnabled
+        and (v.YellowAltCrowdBreakoutEnabled == true or yellowAltTestPreset)
+    Config.YELLOW_ALT_CROWD_BREAKOUT_TEST_PRESET_ACTIVE = yellowAltTestPreset
     Config.YELLOW_ALT_CROWD_BREAKOUT_RADIUS =
         v.YellowAltCrowdBreakoutRadiusTiles
     Config.YELLOW_ALT_CROWD_BREAKOUT_MINIMUM =
@@ -798,6 +959,16 @@ local function applyToConfig(snapshot)
         v.RedCraftBodyHeatEnabled == true
     Config.RED_CRAFT_EXERTION_FEEDBACK_ENABLED =
         v.RedCraftExertionFeedbackEnabled == true
+    Config.RED_CRAFT_PHYSICAL_LOAD_DURATION_SECONDS =
+        v.RedCraftPhysicalLoadDurationSeconds
+    Config.RED_CRAFT_PHYSICAL_LOAD_STACK_LIMIT =
+        v.RedCraftPhysicalLoadStackLimit
+    Config.RED_CRAFT_HEAT_FEEDBACK_INTENSITY =
+        v.RedCraftHeatFeedbackIntensity
+    Config.RED_CRAFT_EXERTION_FEEDBACK_INTENSITY =
+        v.RedCraftExertionFeedbackIntensity
+    Config.RED_CRAFT_MINIMUM_VISIBLE_FEEDBACK_MODE =
+        v.RedCraftMinimumVisibleFeedbackMode
     Config.DEVELOPER_TEST_TOOLS_ENABLED =
         v.DeveloperTestToolsEnabled == true
 
@@ -1122,6 +1293,30 @@ end
 
 function SandboxTuning.GetSnapshot()
     return SandboxTuning.snapshot or SandboxTuning.Load()
+end
+
+function SandboxTuning.GetRawVars()
+    return sourceVars()
+end
+
+function SandboxTuning.GetReleaseDefaults()
+    return copyTable(Release)
+end
+
+function SandboxTuning.GetSchemaSpecs()
+    return Schema.specs
+end
+
+function SandboxTuning.GetDeveloperBypassStatus()
+    local snapshot = SandboxTuning.GetSnapshot()
+    local value = snapshot and snapshot.developerBypass or {}
+    return {
+        is_test_channel = value.is_test_channel == true,
+        developer_tools_enabled = value.developer_tools_enabled == true,
+        general_gameplay_preset = value.general_gameplay_preset
+            or "FORMAL_BALANCE",
+        gate_open = value.gate_open == true,
+    }
 end
 
 function SandboxTuning.Validate()
