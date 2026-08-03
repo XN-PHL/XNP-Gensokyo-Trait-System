@@ -51,6 +51,19 @@ local function distanceSquared(x1, y1, x2, y2)
     return dx * dx + dy * dy
 end
 
+local function inputLog(snapshot, route, result)
+    snapshot = snapshot or {}
+    print("[XNP RED POINTER INPUT]"
+        .. " down_screen=" .. tostring(snapshot.down_screen_x) .. "," .. tostring(snapshot.down_screen_y)
+        .. " up_screen=" .. tostring(snapshot.up_screen_x) .. "," .. tostring(snapshot.up_screen_y)
+        .. " down_local=" .. tostring(snapshot.down_local_x) .. "," .. tostring(snapshot.down_local_y)
+        .. " up_local=" .. tostring(snapshot.up_local_x) .. "," .. tostring(snapshot.up_local_y)
+        .. " move_count=" .. tostring(snapshot.move_count or 0)
+        .. " distance_same_space=" .. tostring(snapshot.distance_same_space or 0)
+        .. " route=" .. tostring(route)
+        .. " result=" .. tostring(result))
+end
+
 local function loadPosition(player, panel)
     if RedUI.loadedPosition and RedUI.player == player then return end
     RedUI.player = player
@@ -81,7 +94,7 @@ end
 local function craftRawStatText()
     local tuning = Core.SandboxTuning
     local unhappiness = tuning and tuning.GetNumber
-        and tuning.GetNumber("RedCraftUnhappinessCost", 10, 0, 100) or 10
+        and tuning.GetNumber("RedCraftUnhappinessReductionPoints", 10, 0, 100) or 10
     local boredom = tuning and tuning.GetNumber
         and tuning.GetNumber("RedPCraftBoredomReduction", 30, 0, 100) or 30
     return string.format(getText("UI_XNPMarker_RedCraftRawStats"),
@@ -107,12 +120,13 @@ end
 
 function Panel:onMouseMove(dx, dy)
     if Drag.IsDragging(self) then
-        local mx, my = getMouseX(), getMouseY()
-        if distanceSquared(mx, my, RedUI.pressX, RedUI.pressY) > DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX then
+        local moved = Drag.Move(self)
+        local snapshot = Drag.GetInputSnapshot(self, nil, nil)
+        if snapshot and snapshot.is_drag then
             RedUI.dragMoved = true
             RedUI.firstClickMs = 0
         end
-        return Drag.Move(self)
+        return moved
     end
     local detail
     if not RedUI.hasTrait then
@@ -127,33 +141,45 @@ function Panel:onMouseMove(dx, dy)
 end
 
 function Panel:onMouseUp(x, y)
-    local moved = RedUI.dragMoved
-    local mx, my = getMouseX(), getMouseY()
-    local released = Drag.Release(self)
-    if moved then return released end
+    local released, snapshot, moved = Drag.Finish(self, x, y)
+    if moved then
+        inputLog(snapshot, "LEFT_RELEASE", "DRAG")
+        return released
+    end
+    local mx = snapshot and snapshot.up_screen_x or getMouseX()
+    local my = snapshot and snapshot.up_screen_y or getMouseY()
     local now = Frame.NowMs()
     local close = distanceSquared(mx, my, RedUI.firstClickX, RedUI.firstClickY) <= DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX
     if RedUI.hasTrait and RedUI.firstClickMs > 0 and now - RedUI.firstClickMs <= DOUBLE_CLICK_MS and close then
         RedUI.firstClickMs = 0
         local queued = Core.RedGuardianMark.QueueCraftOne(RedUI.player, "RED_ROUND_DOUBLE_CLICK")
         if queued then RedUI.MarkDirty() end
+        inputLog(snapshot, "LEFT_RELEASE", queued and "DOUBLE_CLICK" or "DOUBLE_CLICK_REJECTED")
         return true
     end
     RedUI.firstClickMs = now
     RedUI.firstClickX = mx
     RedUI.firstClickY = my
+    inputLog(snapshot, "LEFT_RELEASE", "CLICK_ARMED")
     return released
 end
 
 function Panel:onMouseMoveOutside(dx, dy)
     Tooltip.Hide("RED_MOUSE_OUT")
-    if Drag.IsDragging(self) then RedUI.dragMoved = true; RedUI.firstClickMs = 0 end
-    return Drag.Move(self)
+    local moved = Drag.Move(self)
+    local snapshot = Drag.GetInputSnapshot(self, nil, nil)
+    if snapshot and snapshot.is_drag then
+        RedUI.dragMoved = true
+        RedUI.firstClickMs = 0
+    end
+    return moved
 end
 
 function Panel:onMouseUpOutside(x, y)
     RedUI.firstClickMs = 0
-    return Drag.Release(self)
+    local released, snapshot, moved = Drag.Finish(self, x, y)
+    inputLog(snapshot, "LEFT_RELEASE_OUTSIDE", moved and "DRAG" or "RELEASE_OUTSIDE_NO_DRAG")
+    return released
 end
 
 function Panel:onKeyRelease(key)
