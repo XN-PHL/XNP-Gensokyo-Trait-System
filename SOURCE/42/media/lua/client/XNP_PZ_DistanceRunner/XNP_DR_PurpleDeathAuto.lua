@@ -48,7 +48,8 @@ local function buildSnapshotFromPayload(payload, lineage, ownerKey, source)
         source = source,
         build_marker = Core.Constants and Core.Constants.BUILD_ID
             or "XNP_0560723_PURPLE_DUAL_A",
-        game_build_baseline = "42.19.0",
+        game_build_baseline = Core.Constants
+            and Core.Constants.GAME_BUILD_TARGET or "42.20.0",
         payload = copied,
     }
     local valid, checksum = Codec.ValidateSnapshot(snapshot)
