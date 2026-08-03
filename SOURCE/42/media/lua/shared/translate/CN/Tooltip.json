@@ -1,6 +1,6 @@
 {
-    "Tooltip_XNPPurpleLifeStockRecorder": "\u65e7\u7248\u517c\u5bb9\u7269\u54c1\uff1a\u4ec5\u7528\u4e8e\u4e00\u6b21\u6027\u8fc1\u79fb\uff0c\u4e0d\u518d\u81ea\u52a8\u53d1\u653e\u3002",
-    "Tooltip_XNPPurpleLifeStockBackup": "\u53f3\u952e\u9009\u62e9\u201c\u4f7f\u7528\u6b8b\u673a\u5907\u4efd\u201d\uff0c\u6216\u5de6\u952e\u53cc\u51fb\u4f7f\u7528\u3002\u6210\u529f\u540e\u624d\u6d88\u8017\uff1b\u5931\u8d25\u4fdd\u7559\u3002",
-    "Tooltip_XNPYellowAltCrowdBreakout": "按下实际跑步键时，仅在强控制或至少三只僵尸形成危险围困时温和震开附近僵尸。不会造成伤害或撤销已发生伤害。",
-    "Tooltip_XNPDeveloperTestTools": "测试版专用且默认关闭。只生成带 XNP 所有权标记的损坏测试物品，清理动作不会删除普通物品。"
+    "Tooltip_XNPPurpleLifeStockRecorder":  "旧版兼容物品：仅用于一次性迁移，不再自动发放。",
+    "Tooltip_XNPPurpleLifeStockBackup":  "右键选择“使用残机备份”，或左键双击使用。成功后才消耗；失败保留。",
+    "Tooltip_XNPYellowAltCrowdBreakout":  "按下实际跑步键时，仅在强控制或至少三只僵尸形成危险围困时温和震开附近僵尸。不会造成伤害或撤销已发生伤害。",
+    "Tooltip_XNPDeveloperTestTools":  "测试版专用且默认关闭。只生成带 XNP 所有权标记的损坏测试物品，清理动作不会删除普通物品。"
 }
