@@ -7,6 +7,7 @@ require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Constants"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Codec"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Registry"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Snapshot"
+require "XNP_PZ_DistanceRunner/XNP_DR_PurpleInheritanceRecords"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Items"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Sound"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStockCraftAction"
@@ -19,6 +20,7 @@ local Constants = Core.PurpleLifeStockConstants
 local Codec = Core.PurpleLifeStockCodec
 local Registry = Core.PurpleLifeStockRegistry
 local Snapshot = Core.PurpleLifeStockSnapshot
+local Records = Core.PurpleInheritanceRecords
 local Items = Core.PurpleLifeStockItems
 local Sound = Core.PurpleLifeStockSound
 
@@ -97,22 +99,6 @@ local function notifyPlayer(player, key, fallback)
         pcall(function() player:setHaloNote(text, 190, 120, 255, 240) end)
     end
     return text
-end
-
-local function notifyPlayerRepairSummary(player, repaired, alreadyFull)
-    local fallback = "Footwear repair: repaired %d, already full %d."
-    local template = safeText(
-        "UI_XNPPurpleFootwearRepairSummary", fallback)
-    local ok, text = pcall(
-        string.format, template, repaired, alreadyFull)
-    if not ok then
-        text = string.format(fallback, repaired, alreadyFull)
-    end
-    if player and type(player.setHaloNote) == "function" then
-        pcall(function()
-            player:setHaloNote(text, 240, 240, 240, 240)
-        end)
-    end
 end
 
 local function statRange(stat)
@@ -337,14 +323,12 @@ function Transactions.TogglePhoenixSurvival(player, source)
     local repairRequested = true
     local repairResult = "WRITE_FAILED"
     local repairWriteCount = 0
-    local repairSummary = nil
     if Core.PurpleToggleRepairTransaction
         and type(Core.PurpleToggleRepairTransaction.Request) == "function" then
         local repairOk, repair =
             pcall(Core.PurpleToggleRepairTransaction.Request,
                 player, transactionId, "RIGHT_CLICK_TOGGLE_COMMITTED")
         if repairOk and type(repair) == "table" then
-            repairSummary = repair
             repairResult = tostring(repair.result or "WRITE_FAILED")
             repairWriteCount =
                 tonumber(repair.condition_set_call_count) or 0
@@ -380,23 +364,12 @@ function Transactions.TogglePhoenixSurvival(player, source)
         .. " life_stock_registry_changed=false"
         .. " result="
         .. tostring(readback and "COMMITTED" or "READBACK_MISMATCH"))
-    local repaired = repairSummary
-        and tonumber(repairSummary.repaired_count) or 0
-    local alreadyFull = repairSummary
-        and tonumber(repairSummary.already_full_count) or 0
-    if repaired > 0 or alreadyFull > 0 then
-        notifyPlayerRepairSummary(player, repaired, alreadyFull)
-    elseif repairSummary then
-        notifyPlayer(player, "UI_XNPPurpleFootwearNothingToRepair",
-            "No footwear needs repair.")
-    else
-        notifyPlayer(player,
-            targetEnabled and "UI_XNPPurpleModeEnabled"
-                or "UI_XNPPurpleModeDisabled",
-            targetEnabled
-                and "Phoenix Survival enabled: critical health will recover."
-                or "Phoenix Survival disabled. Life Stock inheritance is unchanged.")
-    end
+    notifyPlayer(player,
+        targetEnabled and "UI_XNPPurpleModeEnabled"
+            or "UI_XNPPurpleModeDisabled",
+        targetEnabled
+            and "Phoenix Survival enabled: critical health will recover."
+            or "Phoenix Survival disabled. Life Stock inheritance is unchanged.")
     Core.PurplePhoenixState.AuditConsistency(
         player, "TOGGLE_COMMITTED", "NA")
     return true, targetEnabled and "BLUE" or "GREEN"
@@ -516,6 +489,13 @@ function Transactions.CommitCraft(player)
         Transactions.activeRecord = false
         return false, itemValidReason or "CRAFT_ITEM_READBACK_FAILED"
     end
+    local record, recordReason = Records.CreateFromSnapshot(
+        player, snapshot, Constants.SOURCE_MANUAL)
+    if not record then
+        rollbackRecord(lineage, savedRegistry, cost, item)
+        Transactions.activeRecord = false
+        return false, recordReason
+    end
     local interval = sandboxNumber("PurpleBackupAutoRecordIntervalGameDays",
         Constants.AUTO_INTERVAL_GAME_DAYS_DEFAULT, 1, 365)
     Registry.SetNextAutoRecordDay(lineage, Registry.GameDay() + interval)
@@ -525,6 +505,7 @@ function Transactions.CommitCraft(player)
         "purple-craft:" .. tostring(token.token_id))
     print("[XNP PURPLE BACKUP RECORD] result=SUCCESS source=MANUAL"
         .. " snapshot_id=" .. tostring(snapshot.snapshot_id)
+        .. " record_id=" .. tostring(record.record_id)
         .. " token_id=" .. tostring(token.token_id)
         .. " snapshot_commit=true item_created=true token_count_delta=1"
         .. " progress_complete=true animation=Craft")
@@ -566,10 +547,18 @@ function Transactions.GrantStarter(player)
         return false, itemReason
     end
     Registry.MarkStarterGrantDone(lineage)
+    local record, recordReason = Records.CreateFromSnapshot(
+        player, snapshot, Constants.SOURCE_INITIAL)
+    if not record then
+        Items.RemoveExact(select(2, invoke(item, "getContainer")), item)
+        Registry.RestoreLineageState(lineage, saved)
+        return false, recordReason
+    end
     Transactions.initialRecordPass = true
     print("[XNP PURPLE STARTER] starter_grant_done=true"
         .. " starter_grant_count=1 token_id=" .. tostring(token.token_id)
         .. " snapshot_id=" .. tostring(snapshot.snapshot_id)
+        .. " record_id=" .. tostring(record.record_id)
         .. " issued_source=STARTER")
     return true, token.token_id
 end
@@ -585,6 +574,8 @@ function Transactions.RefreshWeekly(player)
     if not lineage then return false, ownerKey end
     local tokenCount = Registry.CountValidTokens(lineage)
     if tokenCount < 1 then return false, "AUTO_RECORD_REQUIRES_VALID_TOKEN" end
+    local savedRegistry, savedRegistryReason = Registry.CaptureLineageState(lineage)
+    if not savedRegistry then return false, savedRegistryReason end
     local snapshot, snapshotReason = Snapshot.Build(
         player, lineage, ownerKey, Constants.SOURCE_AUTO)
     if not snapshot then return false, snapshotReason end
@@ -592,13 +583,23 @@ function Transactions.RefreshWeekly(player)
     if not committed then return false, commitReason end
     local rebound, reboundReason, reboundCount = Registry.RebindValidTokens(
         lineage, snapshot.snapshot_id)
-    if not rebound then return false, reboundReason end
+    if not rebound then
+        Registry.RestoreLineageState(lineage, savedRegistry)
+        return false, reboundReason
+    end
+    local record, recordReason = Records.CreateFromSnapshot(
+        player, snapshot, Constants.SOURCE_AUTO)
+    if not record then
+        Registry.RestoreLineageState(lineage, savedRegistry)
+        return false, recordReason
+    end
     local interval = sandboxNumber("PurpleBackupAutoRecordIntervalGameDays",
         Constants.AUTO_INTERVAL_GAME_DAYS_DEFAULT, 1, 365)
     Registry.SetNextAutoRecordDay(lineage, Registry.GameDay() + interval)
     Transactions.autoRecordPass = true
     print("[XNP PURPLE BACKUP AUTO] result=SUCCESS snapshot_id="
         .. tostring(snapshot.snapshot_id)
+        .. " record_id=" .. tostring(record.record_id)
         .. " valid_tokens_rebound=" .. tostring(reboundCount)
         .. " token_count_delta=0 item_created=false cost_applied=false"
         .. " sound_call=false immutable_snapshot=true")
@@ -639,6 +640,9 @@ function Transactions.PreflightRestore(player, item, action)
     if checksum ~= token.checksum or checksum ~= metadata.checksum then
         return false, "BACKUP_CHECKSUM_MISMATCH"
     end
+    local record, recordReason = Records.ResolveForRestore(
+        player, token.snapshot_id)
+    if not record then return false, recordReason end
     return true, "RESTORE_PREFLIGHT_PASS", {
         metadata = metadata,
         token = token,
@@ -646,6 +650,7 @@ function Transactions.PreflightRestore(player, item, action)
         lineage = lineage,
         owner_key = ownerKey,
         claim = claim,
+        record = record,
     }
 end
 
@@ -679,6 +684,14 @@ end
 
 local function refreshTraitRuntime(player, reason)
     local refreshed = false
+    if Snapshot and type(Snapshot.RepairTraitMultiplicity) == "function" then
+        local repairOk, repaired, repairReason = pcall(
+            Snapshot.RepairTraitMultiplicity, player, reason or "PURPLE_TRAIT_MUTATION")
+        if not repairOk or repaired ~= true then
+            print("[XNP TRAIT MULTIPLICITY REPAIR] result=FAILED reason="
+                .. tostring(repairOk and repairReason or repaired))
+        end
+    end
     if Core.Runtime and type(Core.Runtime.InvalidateTraitState) == "function" then
         Core.Runtime.InvalidateTraitState(reason or "PURPLE_TRAIT_MUTATION")
     end
@@ -709,7 +722,8 @@ local function deprecatedAutoRearmAfterRestore()
 end
 
 local function rollbackRestore(player, beforePayload, lineage, savedRegistry, item)
-    local playerRestored, playerReason = Snapshot.ApplyPayload(player, beforePayload)
+    local playerRestored, playerReason = Snapshot.ApplyPayload(player, beforePayload,
+        { replace_traits = true, perk_mode = "exact" })
     local registryRestored = Registry.RestoreLineageState(
         lineage, savedRegistry) == true
     local itemPreserved = item ~= nil and select(1,
@@ -727,31 +741,53 @@ function Transactions.CommitRestore(player, item)
         player, item, Transactions.queuedRestoreAction)
     if not valid then return false, reason end
     Transactions.activeRestore = true
+    local restoreTransactionId, restoreTransactionReason = Records.BeginRestore(
+        context.record, context.token.token_id)
+    if not restoreTransactionId then
+        Transactions.activeRestore = false
+        return false, restoreTransactionReason
+    end
     local beforePayload, beforeReason = Snapshot.CapturePayload(player)
     if not beforePayload then
+        Records.AbortRestore(restoreTransactionId)
         Transactions.activeRestore = false
         return false, beforeReason
     end
     local savedRegistry, savedReason = Registry.CaptureLineageState(context.lineage)
     if not savedRegistry then
+        Records.AbortRestore(restoreTransactionId)
         Transactions.activeRestore = false
         return false, savedReason
     end
-    local applied, applyReason = Snapshot.ApplyPayload(
-        player, context.entry.snapshot.payload)
+    local applied, applyReason = Snapshot.ApplyPayload(player,
+        context.record.snapshot_payload, {
+            replace_traits = true,
+            perk_mode = "quarter_delta",
+            restore_transaction_id = restoreTransactionId,
+        })
     if not applied then
         local _, rollbackReason = rollbackRestore(
             player, beforePayload, context.lineage, savedRegistry, item)
+        Records.AbortRestore(restoreTransactionId)
         Transactions.activeRestore = false
         print("[XNP PURPLE BACKUP RESTORE] result=FAILED stage=APPLY reason="
             .. tostring(applyReason) .. " " .. tostring(rollbackReason)
             .. " item_preserved=true success_sound_call=false")
         return false, applyReason
     end
+    local transactionCommitted, transactionCommitReason =
+        Records.CompleteRestore(restoreTransactionId)
+    if not transactionCommitted then
+        rollbackRestore(player, beforePayload, context.lineage, savedRegistry, item)
+        Records.AbortRestore(restoreTransactionId)
+        Transactions.activeRestore = false
+        return false, transactionCommitReason
+    end
     local consumed, consumeReason = Registry.MarkTokenConsumed(
         context.token.token_id)
     if not consumed then
         rollbackRestore(player, beforePayload, context.lineage, savedRegistry, item)
+        Records.AbortRestore(restoreTransactionId)
         Transactions.activeRestore = false
         return false, consumeReason
     end
@@ -759,6 +795,7 @@ function Transactions.CommitRestore(player, item)
         context.claim, context.owner_key, context.token.token_id)
     if not claimed then
         rollbackRestore(player, beforePayload, context.lineage, savedRegistry, item)
+        Records.AbortRestore(restoreTransactionId)
         Transactions.activeRestore = false
         return false, claimReason
     end
@@ -768,6 +805,7 @@ function Transactions.CommitRestore(player, item)
     local stillAccessible = select(1, Items.IsExactAccessible(player, item))
     if not removed or stillAccessible == true then
         rollbackRestore(player, beforePayload, context.lineage, savedRegistry, item)
+        Records.AbortRestore(restoreTransactionId)
         Transactions.activeRestore = false
         return false, removeReason or "EXACT_ITEM_REMOVE_READBACK_FAILED"
     end
@@ -782,6 +820,9 @@ function Transactions.CommitRestore(player, item)
     Transactions.activeRestore = false
     print("[XNP PURPLE BACKUP RESTORE] result=SUCCESS"
         .. " token_id=" .. tostring(context.token.token_id)
+        .. " selected_record_id=" .. tostring(context.record.record_id)
+        .. " selected_display_name=" .. tostring(context.record.display_name)
+        .. " restore_transaction_id=" .. tostring(restoreTransactionId)
         .. " snapshot_id=" .. tostring(context.token.snapshot_id)
         .. " PURPLE_RESTORE_SUCCESS=true"
         .. " PURPLE_EXACT_ITEM_REMOVED=true"
@@ -791,6 +832,24 @@ function Transactions.CommitRestore(player, item)
         .. " POST_RESTORE_AUTO_REARM_REASON=" .. tostring(rearmReason)
         .. " profession_traits_perks_visual_restored=true")
     return true, context.token.token_id
+end
+
+function Transactions.SelectInheritanceRecord(player, recordId)
+    return Records.Select(player, recordId, "DIRECT")
+end
+
+function Transactions.SelectRandomInheritanceRecord(player)
+    return Records.SelectRandom(player)
+end
+
+function Transactions.RequestDeleteInheritanceRecord(player, recordId)
+    if Transactions.activeRestore then return false, "RESTORE_ACTIVE_DELETE_BLOCKED" end
+    return Records.RequestDelete(player, recordId)
+end
+
+function Transactions.ConfirmDeleteInheritanceRecord(player, recordId)
+    if Transactions.activeRestore then return false, "RESTORE_ACTIVE_DELETE_BLOCKED" end
+    return Records.ConfirmDelete(player, recordId)
 end
 
 function Transactions.Restore(player, item)
