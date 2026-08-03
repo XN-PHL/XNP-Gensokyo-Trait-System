@@ -1,10 +1,19 @@
+local XNPChannelGuard = require "XNP_PZ_DistanceRunner/XNP_DR_ChannelGuard"
+if type(XNPChannelGuard) == "table"
+    and type(XNPChannelGuard.allowRuntime) == "function"
+    and not XNPChannelGuard.allowRuntime() then
+    return
+end
+
 require "ISUI/ISInventoryPane"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Constants"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Registry"
+require "XNP_PZ_DistanceRunner/XNP_DR_PurpleInheritanceRecords"
 
 local Core = XNP_PZ_DistanceRunner
 local Constants = Core.PurpleLifeStockConstants
 local Registry = Core.PurpleLifeStockRegistry
+local Records = Core.PurpleInheritanceRecords
 
 local Items = {
     doubleClickInstalled = false,
@@ -570,6 +579,34 @@ function Items.OnContextAction(item, playerIndex)
     return Items.HandleInput("CONTEXT_MENU", playerIndex, item)
 end
 
+function Items.OnSelectInheritanceRecord(record, playerIndex)
+    local player = playerByIndex(playerIndex)
+    local transaction = Core.PurpleLifeStockTransactions
+    if not player or not transaction then return false, "RECORD_SELECTION_UNAVAILABLE" end
+    return transaction.SelectInheritanceRecord(player, record.record_id)
+end
+
+function Items.OnRandomInheritanceRecord(_, playerIndex)
+    local player = playerByIndex(playerIndex)
+    local transaction = Core.PurpleLifeStockTransactions
+    if not player or not transaction then return false, "RECORD_SELECTION_UNAVAILABLE" end
+    return transaction.SelectRandomInheritanceRecord(player)
+end
+
+function Items.OnRequestDeleteInheritanceRecord(record, playerIndex)
+    local player = playerByIndex(playerIndex)
+    local transaction = Core.PurpleLifeStockTransactions
+    if not player or not transaction then return false, "RECORD_DELETE_UNAVAILABLE" end
+    return transaction.RequestDeleteInheritanceRecord(player, record.record_id)
+end
+
+function Items.OnConfirmDeleteInheritanceRecord(record, playerIndex)
+    local player = playerByIndex(playerIndex)
+    local transaction = Core.PurpleLifeStockTransactions
+    if not player or not transaction then return false, "RECORD_DELETE_UNAVAILABLE" end
+    return transaction.ConfirmDeleteInheritanceRecord(player, record.record_id)
+end
+
 function Items.OnFillInventoryObjectContextMenu(playerIndex, context, items)
     local player = playerByIndex(playerIndex)
     if not player or not context then return end
@@ -588,6 +625,29 @@ function Items.OnFillInventoryObjectContextMenu(playerIndex, context, items)
     if backup then
         context:addOption(getText("ContextMenu_XNPPurpleUseBackup"),
             backup, Items.OnContextAction, playerIndex)
+        local records = Records and Records.ListValid
+            and Records.ListValid(player) or {}
+        if #records > 0 then
+            context:addOption(getText("ContextMenu_XNPPurpleSelectRandomRecord"),
+                backup, Items.OnRandomInheritanceRecord, playerIndex)
+        end
+        for _, record in ipairs(records) do
+            local label = getText("ContextMenu_XNPPurpleSelectRecord")
+                .. ": " .. tostring(record.display_name)
+                .. " [" .. tostring(record.record_id) .. "]"
+            context:addOption(label, record, Items.OnSelectInheritanceRecord, playerIndex)
+            local pending = Records.IsDeletePending and Records.IsDeletePending(
+                player, record.record_id) == true
+            if pending then
+                context:addOption(getText("ContextMenu_XNPPurpleConfirmDeleteRecord")
+                    .. ": " .. tostring(record.display_name), record,
+                    Items.OnConfirmDeleteInheritanceRecord, playerIndex)
+            else
+                context:addOption(getText("ContextMenu_XNPPurpleDeleteRecord")
+                    .. ": " .. tostring(record.display_name), record,
+                    Items.OnRequestDeleteInheritanceRecord, playerIndex)
+            end
+        end
     end
 end
 
