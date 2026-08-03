@@ -1247,9 +1247,11 @@ if Core.Constants and Core.Constants.Log then
     Core.Constants.Log("[XNP CONFIG] loaded path=42/media/lua/shared/XNP_PZ_DistanceRunner/XNP_DR_Config.lua source=shared_config")
 end
 
-if not Core.config_v2_210_test1_startup_logged then
-    Core.config_v2_210_test1_startup_logged = true
-    print("[XNP TEST BUILD] BUILD_MARKER=XNP_V2_210_TEST1_IMPROVEMENTS_A config_loaded=true")
+if not Core.config_v2_220_test2_startup_logged then
+    Core.config_v2_220_test2_startup_logged = true
+    print("[XNP STABLE BUILD] VERSION=" .. tostring(Core.Constants.VERSION)
+        .. " BUILD_MARKER=" .. tostring(Core.Constants.BUILD_ID)
+        .. " config_loaded=true")
 end
 
 return Config
