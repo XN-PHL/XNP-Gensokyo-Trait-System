@@ -1,3 +1,10 @@
+local XNPChannelGuard = require "XNP_PZ_DistanceRunner/XNP_DR_ChannelGuard"
+if type(XNPChannelGuard) == "table"
+    and type(XNPChannelGuard.allowRuntime) == "function"
+    and not XNPChannelGuard.allowRuntime() then
+    return
+end
+
 require "XNP_PZ_DistanceRunner/XNP_DR_ExtraTraits"
 require "XNP_PZ_DistanceRunner/XNP_DR_RedGuardianConsumeAction"
 require "XNP_PZ_DistanceRunner/XNP_DR_RedGuardianCraftAction"
@@ -66,25 +73,6 @@ local function sandboxBoolean(name, fallback)
         return tuning.GetBoolean(name, fallback)
     end
     return fallback
-end
-
-local function safeText(key, fallback)
-    if type(getText) == "function" then
-        local ok, value = pcall(getText, key)
-        if ok and value and value ~= key then return tostring(value) end
-    end
-    return fallback
-end
-
-local function notifyCraftMood(player, unhappinessIncrease, boredomDecrease)
-    local template = safeText("UI_XNPRedCraftVisibleResult",
-        "P Point crafted: Unhappiness +%s, Boredom -%s")
-    local text = string.format(template,
-        tostring(unhappinessIncrease), tostring(boredomDecrease))
-    if player and type(player.setHaloNote) == "function" then
-        pcall(function() player:setHaloNote(text, 255, 90, 90, 240) end)
-    end
-    return text
 end
 
 local function playerData(player)
@@ -474,6 +462,23 @@ local function applyWhiteTreatment(player)
     local before = numberRead(body, "getOverallBodyHealth", nil)
     if before == nil then return false, "OVERALL_HEALTH_UNAVAILABLE" end
     local fractures, majors, minors = collectTreatment(parts)
+    local healingAmount = sandboxNumber("RedHealingHealthAmount", 25, 0, 100)
+    local target = math.min(100.0, before + healingAmount)
+    local infectionPresent = boolRead(body, "isInfected")
+        or boolRead(body, "isFakeInfected")
+    local conditionCount = #fractures + #majors + #minors
+    if target <= before + 0.001 and conditionCount == 0
+        and infectionPresent ~= true then
+        print("[XNP RED HEAL TRANSACTION] mode=WHITE_TREATMENT"
+            .. " health_before=" .. string.format("%.2f", before)
+            .. " health_requested=" .. string.format("%.2f", healingAmount)
+            .. " health_target=" .. string.format("%.2f", target)
+            .. " health_after=" .. string.format("%.2f", before)
+            .. " general_health_delta=0 wound_write_count=0 infection_write_count=0"
+            .. " fracture_write_count=0 effect_count=0 consume_count=0 success=false"
+            .. " failure_reason=NO_HEALABLE_CONDITION")
+        return false, "NO_HEALABLE_CONDITION"
+    end
     local used = {}
     local fractureEnabled = sandboxBoolean("RedHealFractureEnabled", true)
     local infectionEnabled = sandboxBoolean("RedClearZombieInfectionEnabled", true)
@@ -488,7 +493,7 @@ local function applyWhiteTreatment(player)
         clearZombieInfection(player, body, parts, infectionEnabled, zombificationEnabled,
             fakeInfectionEnabled, clearNormalWound)
     end
-    clearSelectedWound(selectedFracture)
+    local fractureCleared = clearSelectedWound(selectedFracture)
     for _ = 1, majorLimit do
         local selected = randomCandidate(majors, used)
         if not selected then break end
@@ -499,10 +504,30 @@ local function applyWhiteTreatment(player)
         if not selected then break end
         if clearSelectedWound(selected) then minorCleared = minorCleared + 1 end
     end
-    local healingAmount = sandboxNumber("RedHealingHealthAmount", 25, 0, 100)
-    local target = math.min(100.0, before + healingAmount)
     local wrote = invoke(body, "setOverallBodyHealth", target)
-    if not wrote then return false, "OVERALL_HEALTH_WRITE_FAILED" end
+    local after = numberRead(body, "getOverallBodyHealth", nil)
+    local healthDelta = after and (after - before) or 0
+    local woundWriteCount = majorCleared + minorCleared
+    local fractureWriteCount = fractureCleared and 1 or 0
+    local infectionWriteCount = (infectionEnabled or zombificationEnabled
+        or fakeInfectionEnabled or clearNormalWound) and 1 or 0
+    local effectCount = (healthDelta > 0.001 and 1 or 0)
+        + woundWriteCount + fractureWriteCount
+        + ((infectionPresent == true and infectionWriteCount > 0) and 1 or 0)
+    if wrote ~= true or after == nil or effectCount <= 0 then
+        print("[XNP RED HEAL TRANSACTION] mode=WHITE_TREATMENT"
+            .. " health_before=" .. string.format("%.2f", before)
+            .. " health_requested=" .. string.format("%.2f", healingAmount)
+            .. " health_target=" .. string.format("%.2f", target)
+            .. " health_after=" .. tostring(after)
+            .. " general_health_delta=" .. string.format("%.2f", healthDelta)
+            .. " wound_write_count=" .. tostring(woundWriteCount)
+            .. " infection_write_count=" .. tostring(infectionWriteCount)
+            .. " fracture_write_count=" .. tostring(fractureWriteCount)
+            .. " effect_count=" .. tostring(effectCount)
+            .. " consume_count=0 success=false failure_reason=OVERALL_HEALTH_WRITE_FAILED")
+        return false, "OVERALL_HEALTH_WRITE_FAILED"
+    end
     print("[XNP RED MAGIC] mode=WHITE_TREATMENT health_before=" .. string.format("%.2f", before)
         .. " health_target=" .. string.format("%.2f", target)
         .. " fracture=" .. tostring(selectedFracture and selectedFracture.kind or "NONE")
@@ -511,6 +536,17 @@ local function applyWhiteTreatment(player)
         .. " zombie_infection_cleared=" .. tostring(infectionEnabled)
         .. " zombification_stat_cleared=" .. tostring(zombificationEnabled)
         .. " ordinary_wound_infection_preserved=" .. tostring(not clearNormalWound))
+    print("[XNP RED HEAL TRANSACTION] mode=WHITE_TREATMENT"
+        .. " health_before=" .. string.format("%.2f", before)
+        .. " health_requested=" .. string.format("%.2f", healingAmount)
+        .. " health_target=" .. string.format("%.2f", target)
+        .. " health_after=" .. string.format("%.2f", after)
+        .. " general_health_delta=" .. string.format("%.2f", healthDelta)
+        .. " wound_write_count=" .. tostring(woundWriteCount)
+        .. " infection_write_count=" .. tostring(infectionWriteCount)
+        .. " fracture_write_count=" .. tostring(fractureWriteCount)
+        .. " effect_count=" .. tostring(effectCount)
+        .. " consume_count=1 success=true failure_reason=NONE")
     return true, "WHITE_TREATMENT_APPLIED"
 end
 
@@ -550,19 +586,25 @@ function RedGuardian.GetCraftCost(player)
     local stats = getStats(player)
     local health = body and numberRead(body, "getOverallBodyHealth", nil) or nil
     local hunger = stats and statRead(stats, CharacterStat and CharacterStat.HUNGER) or nil
+    local fatigueStat = CharacterStat and CharacterStat.FATIGUE or nil
     local unhappinessStat = CharacterStat and CharacterStat.UNHAPPINESS or nil
     local boredomStat = CharacterStat and CharacterStat.BOREDOM or nil
+    local fatigue = stats and statRead(stats, fatigueStat) or nil
     local unhappiness = stats and statRead(stats, unhappinessStat) or nil
     local boredom = stats and statRead(stats, boredomStat) or nil
     local satiety = hunger and (1.0 - hunger) or nil
-    if health == nil or satiety == nil or unhappiness == nil or boredom == nil then
+    if health == nil or satiety == nil or fatigue == nil
+        or unhappiness == nil or boredom == nil then
         return nil, "CRAFT_RESOURCE_API_UNAVAILABLE"
     end
     local safetyFloorPoints = sandboxNumber("RedSafetyFloorPercent", 20, 1, 95)
     local satietyFloor = safetyFloorPoints / 100.0
     local healthCostPoints = sandboxNumber("RedCraftHealthCostPoints", 10, 0, 99)
-    local unhappinessCost = sandboxNumber("RedCraftUnhappinessCost", 10, 0, 100)
+    local unhappinessReduction = sandboxNumber(
+        "RedCraftUnhappinessReductionPoints", 10, 0, 100)
     local boredomReduction = sandboxNumber("RedPCraftBoredomReduction", 30, 0, 100)
+    local fatigueCostPercent = sandboxNumber(
+        "RedCraftFatigueCostPercent", 10, 0, 100)
     local hungerCost = sandboxNumber("RedCraftHungerCost", 0.10, 0.0, 1.0)
     if health - healthCostPoints < safetyFloorPoints then return nil, "HEALTH_RESERVE_TOO_LOW" end
     if satiety - hungerCost < satietyFloor then return nil, "SATIETY_RESERVE_TOO_LOW" end
@@ -571,14 +613,18 @@ function RedGuardian.GetCraftCost(player)
         stats = stats,
         healthBefore = health,
         hungerBefore = hunger,
+        fatigueBefore = fatigue,
         unhappinessBefore = unhappiness,
         boredomBefore = boredom,
         healthCostPoints = healthCostPoints,
-        unhappinessCost = unhappinessCost,
+        unhappinessReduction = unhappinessReduction,
         boredomReduction = boredomReduction,
+        fatigueCostPercent = fatigueCostPercent,
+        fatigueStat = fatigueStat,
         unhappinessStat = unhappinessStat,
         boredomStat = boredomStat,
-        unhappinessRawDelta = statPointsDelta(unhappinessStat, unhappinessCost),
+        fatigueRawDelta = statPointsDelta(fatigueStat, fatigueCostPercent),
+        unhappinessRawDelta = statPointsDelta(unhappinessStat, unhappinessReduction),
         boredomRawDelta = statPointsDelta(boredomStat, boredomReduction),
         hungerCost = hungerCost,
         safetyFloorPoints = safetyFloorPoints,
@@ -644,11 +690,13 @@ local function restoreCraftSnapshot(cost, inventory, item)
         removeCreatedItem(inventory, item)
         invoke(cost.body, "setOverallBodyHealth", cost.healthBefore)
         statWrite(cost.stats, CharacterStat.HUNGER, cost.hungerBefore)
+        statWrite(cost.stats, cost.fatigueStat, cost.fatigueBefore)
         statWrite(cost.stats, CharacterStat.UNHAPPINESS, cost.unhappinessBefore)
         statWrite(cost.stats, CharacterStat.BOREDOM, cost.boredomBefore)
 
         local restoredHealth = numberRead(cost.body, "getOverallBodyHealth", nil)
         local restoredHunger = statRead(cost.stats, CharacterStat.HUNGER)
+        local restoredFatigue = statRead(cost.stats, cost.fatigueStat)
         local restoredUnhappiness = statRead(cost.stats, CharacterStat.UNHAPPINESS)
         local restoredBoredom = statRead(cost.stats, CharacterStat.BOREDOM)
         result = {
@@ -656,10 +704,11 @@ local function restoreCraftSnapshot(cost, inventory, item)
             item = exactItemAbsent(inventory, item),
             health = closeEnough(restoredHealth, cost.healthBefore, 0.01),
             hunger = closeEnough(restoredHunger, cost.hungerBefore, 0.001),
+            fatigue = closeEnough(restoredFatigue, cost.fatigueBefore, 0.001),
             unhappiness = closeEnough(restoredUnhappiness, cost.unhappinessBefore, 0.01),
             boredom = closeEnough(restoredBoredom, cost.boredomBefore, 0.01),
         }
-        result.complete = result.item and result.health and result.hunger
+        result.complete = result.item and result.health and result.hunger and result.fatigue
             and result.unhappiness and result.boredom
         if result.complete then return result end
     end
@@ -684,16 +733,20 @@ function RedGuardian.CommitCraft(player)
     end
     local healthTarget = cost.healthBefore - cost.healthCostPoints
     local hungerTarget = math.min(1.0, cost.hungerBefore + cost.hungerCost)
+    local fatigueTarget = statClamp(cost.fatigueStat,
+        cost.fatigueBefore + cost.fatigueRawDelta)
     local unhappinessTarget = statClamp(cost.unhappinessStat,
-        cost.unhappinessBefore + cost.unhappinessRawDelta)
+        cost.unhappinessBefore - cost.unhappinessRawDelta)
     local boredomTarget = statClamp(cost.boredomStat,
         cost.boredomBefore - cost.boredomRawDelta)
     local healthCallOk = invoke(cost.body, "setOverallBodyHealth", healthTarget)
     local hungerOk = statWrite(cost.stats, CharacterStat.HUNGER, hungerTarget)
+    local fatigueOk = statWrite(cost.stats, cost.fatigueStat, fatigueTarget)
     local unhappinessOk = statWrite(cost.stats, cost.unhappinessStat, unhappinessTarget)
     local boredomOk = statWrite(cost.stats, cost.boredomStat, boredomTarget)
     local healthReadback = numberRead(cost.body, "getOverallBodyHealth", nil)
     local hungerReadback = statRead(cost.stats, CharacterStat.HUNGER)
+    local fatigueReadback = statRead(cost.stats, cost.fatigueStat)
     local unhappinessReadback = statRead(cost.stats, cost.unhappinessStat)
     local boredomReadback = statRead(cost.stats, cost.boredomStat)
     local unhappinessReadbackPass = closeEnough(
@@ -703,10 +756,15 @@ function RedGuardian.CommitCraft(player)
     print("[XNP RED CRAFT STAT] stat_id="
         .. statId(cost.unhappinessStat, "Unhappiness")
         .. " before=" .. tostring(cost.unhappinessBefore)
-        .. " configured_delta=+" .. tostring(cost.unhappinessCost)
+        .. " configured_delta=-" .. tostring(cost.unhappinessReduction)
         .. " target=" .. tostring(unhappinessTarget)
         .. " after=" .. tostring(unhappinessReadback)
-        .. " direction=INCREASE readback_pass=" .. tostring(unhappinessReadbackPass))
+        .. " direction=DECREASE readback_pass=" .. tostring(unhappinessReadbackPass))
+    print("[XNP RED CRAFT MOOD] before=" .. tostring(cost.unhappinessBefore)
+        .. " requested_reduction=" .. tostring(cost.unhappinessReduction)
+        .. " after=" .. tostring(unhappinessReadback)
+        .. " direction=DECREASE readback_pass=" .. tostring(unhappinessReadbackPass)
+        .. " halo_created=false")
     print("[XNP RED CRAFT STAT] stat_id="
         .. statId(cost.boredomStat, "Boredom")
         .. " before=" .. tostring(cost.boredomBefore)
@@ -715,20 +773,24 @@ function RedGuardian.CommitCraft(player)
         .. " after=" .. tostring(boredomReadback)
         .. " direction=DECREASE readback_pass=" .. tostring(boredomReadbackPass))
     logMoodProbe(cost.unhappinessStat, "Unhappiness",
-        cost.unhappinessBefore, "+" .. tostring(cost.unhappinessCost),
-        unhappinessReadback, "CN_UI_UNHAPPINESS_YOUYU", "INCREASE")
+        cost.unhappinessBefore, "-" .. tostring(cost.unhappinessReduction),
+        unhappinessReadback, "CN_UI_UNHAPPINESS_YOUYU", "DECREASE")
     logMoodProbe(cost.boredomStat, "Boredom",
         cost.boredomBefore, "-" .. tostring(cost.boredomReduction),
         boredomReadback, "CN_UI_BOREDOM_WULIAO", "DECREASE")
-    local committed = healthCallOk and hungerOk and unhappinessOk and boredomOk
+    local fatigueReadbackPass = closeEnough(fatigueReadback, fatigueTarget, 0.001)
+    local committed = healthCallOk and hungerOk and fatigueOk
+        and unhappinessOk and boredomOk
         and closeEnough(healthReadback, healthTarget, 0.01)
         and closeEnough(hungerReadback, hungerTarget, 0.001)
+        and fatigueReadbackPass
         and unhappinessReadbackPass and boredomReadbackPass
     if not committed then
         local rollback = restoreCraftSnapshot(cost, inventory, createdItemReference)
         if rollback and rollback.complete then
             print("[XNP RED CRAFT] complete=false reason=CRAFT_COMMIT_ROLLED_BACK"
                 .. " item_removed=true health_restored=true hunger_restored=true"
+                .. " fatigue_restored=true"
                 .. " unhappiness_restored=true boredom_restored=true HEALTH_COST_CHARGED=false"
                 .. " UNHAPPINESS_COST_CHARGED=false rollback_readback_verified=true"
                 .. " preexisting_items_preserved=true created_item_reference_tracked=true"
@@ -742,6 +804,7 @@ function RedGuardian.CommitCraft(player)
             .. " item_removed=" .. tostring(rollback and rollback.item == true)
             .. " health_restored=" .. tostring(rollback and rollback.health == true)
             .. " hunger_restored=" .. tostring(rollback and rollback.hunger == true)
+            .. " fatigue_restored=" .. tostring(rollback and rollback.fatigue == true)
             .. " unhappiness_restored=" .. tostring(rollback and rollback.unhappiness == true)
             .. " boredom_restored=" .. tostring(rollback and rollback.boredom == true)
             .. " zero_cost_claimed=false SUBSYSTEM_GUARD=RED_CRAFT_ONLY"
@@ -750,34 +813,15 @@ function RedGuardian.CommitCraft(player)
     end
     if Core.RedMagicUI then Core.RedMagicUI.MarkDirty() end
     RedGuardian.lastCraftByPlayer[player] = traitNowMs()
-    local actualUnhappinessIncrease = math.max(
-        0, (tonumber(unhappinessReadback) or 0)
-            - (tonumber(cost.unhappinessBefore) or 0))
-    local actualBoredomDecrease = math.max(
-        0, (tonumber(cost.boredomBefore) or 0)
-            - (tonumber(boredomReadback) or 0))
-    notifyCraftMood(player,
-        string.format("%.2f", actualUnhappinessIncrease),
-        string.format("%.2f", actualBoredomDecrease))
-    print("[XNP RED CRAFT USER VISIBLE]"
-        .. " observed_ui_owner=XNP_HALO"
-        .. " observed_ui_label=UNHAPPINESS"
-        .. " observed_ui_before=" .. tostring(cost.unhappinessBefore)
-        .. " observed_ui_after=" .. tostring(unhappinessReadback)
-        .. " user_requested_direction=INCREASE"
-        .. " visible_direction="
-        .. visibleDirection(cost.unhappinessBefore, unhappinessReadback)
-        .. " raw_stat_id=Unhappiness"
-        .. " raw_before=" .. tostring(cost.unhappinessBefore)
-        .. " raw_after=" .. tostring(unhappinessReadback)
-        .. " mapping=RAW_CHARACTER_STAT_PLUS_EXPLICIT_XNP_HALO"
-        .. " external_ui_owner=SIMPLE_STATUS_OR_VANILLA_UNRESOLVED"
-        .. " pass=NOT_YET_TESTED")
     print("[XNP RED CRAFT] complete=true item_count=1 health_cost_points="
         .. string.format("%.2f", cost.healthCostPoints)
-        .. " unhappiness_cost=" .. string.format("%.2f", cost.unhappinessCost)
-        .. " unhappiness_direction=INCREASE"
+        .. " unhappiness_reduction=" .. string.format("%.2f", cost.unhappinessReduction)
+        .. " unhappiness_direction=DECREASE halo_created=false"
         .. " hunger_cost=" .. string.format("%.4f", cost.hungerCost)
+        .. " fatigue_cost_percent=" .. string.format("%.2f", cost.fatigueCostPercent)
+        .. " fatigue_before=" .. string.format("%.4f", cost.fatigueBefore)
+        .. " fatigue_after=" .. string.format("%.4f", fatigueTarget)
+        .. " fatigue_readback_pass=" .. tostring(fatigueReadbackPass)
         .. " health_before_points=" .. string.format("%.2f", cost.healthBefore)
         .. " health_after_points=" .. string.format("%.2f", healthTarget)
         .. " unhappiness_before=" .. string.format("%.2f", cost.unhappinessBefore)
@@ -789,7 +833,22 @@ function RedGuardian.CommitCraft(player)
         .. " authority=" .. tostring(cost.authorityReason)
         .. " cost_charged_once=true created_item_reference_tracked=true"
         .. " transaction_id=" .. transactionId)
-    return true, "CRAFT_COMMITTED"
+    return true, "CRAFT_COMMITTED", {
+        transactionId = transactionId,
+        costsReadbackPass = true,
+        itemCreated = true,
+        healthBefore = cost.healthBefore,
+        healthAfter = healthReadback,
+        hungerBefore = cost.hungerBefore,
+        hungerAfter = hungerReadback,
+        fatigueBefore = cost.fatigueBefore,
+        fatigueAfter = fatigueReadback,
+        unhappinessBefore = cost.unhappinessBefore,
+        unhappinessAfter = unhappinessReadback,
+        boredomBefore = cost.boredomBefore,
+        boredomAfter = boredomReadback,
+        authority = cost.authorityReason,
+    }
 end
 
 local function starterLog(key, message)
