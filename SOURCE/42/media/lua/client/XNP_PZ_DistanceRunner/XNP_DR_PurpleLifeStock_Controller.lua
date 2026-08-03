@@ -3,6 +3,7 @@ require "XNP_PZ_DistanceRunner/XNP_DR_PurplePhoenixTrait"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurplePhoenixState"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Constants"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Registry"
+require "XNP_PZ_DistanceRunner/XNP_DR_PurpleInheritanceRecords"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Items"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleLifeStock_Transactions"
 require "XNP_PZ_DistanceRunner/XNP_DR_PurpleDeathAuto"
@@ -10,6 +11,7 @@ require "XNP_PZ_DistanceRunner/XNP_DR_PurpleDeathAuto"
 local Core = XNP_PZ_DistanceRunner
 local Constants = Core.PurpleLifeStockConstants
 local Registry = Core.PurpleLifeStockRegistry
+local Records = Core.PurpleInheritanceRecords
 local Items = Core.PurpleLifeStockItems
 local Transactions = Core.PurpleLifeStockTransactions
 local DeathAuto = Core.PurpleDeathAuto
@@ -89,6 +91,8 @@ function Controller.InitializePlayer(player, source)
     Controller.deathHandledPlayer = nil
     Controller.deathHandlerCallCount = 0
     Controller.lastCleanupReason = nil
+    local recordsMigrationReason = "PURPLE_TRAIT_NOT_PRESENT"
+    local recordsMigrationCount = 0
     if purpleSystemEnabled() and hasPurple(player) then
         Registry.MarkPurpleLineage(lineage)
         Core.PurplePhoenixState.EnsureDefaultMigration(
@@ -100,6 +104,13 @@ function Controller.InitializePlayer(player, source)
                 .. tostring(starterReason))
         elseif not starterWasDone then
             Controller.starterGrantCount = Controller.starterGrantCount + 1
+        end
+        local recordsMigrated
+        recordsMigrated, recordsMigrationReason, recordsMigrationCount =
+            Records.MigrateLegacy(player)
+        if not recordsMigrated then
+            print("[XNP PURPLE RECORD MIGRATION] result=DEFERRED reason="
+                .. tostring(recordsMigrationReason))
         end
         initializeAutoDue(lineage)
         DeathAuto.CaptureCandidate(
@@ -117,6 +128,8 @@ function Controller.InitializePlayer(player, source)
         .. " migration=" .. tostring(migrationReason)
         .. " legacy_item_migration=" .. tostring(itemMigrationReason)
         .. " legacy_item_migration_count=" .. tostring(itemMigrationCount or 0)
+        .. " record_migration=" .. tostring(recordsMigrationReason)
+        .. " record_migration_count=" .. tostring(recordsMigrationCount or 0)
         .. " valid_token_count=" .. tostring(tokenCount)
         .. " auto_regrant_count=0 auto_recreate_count=0"
         .. " recorder_grant_enabled=false")
