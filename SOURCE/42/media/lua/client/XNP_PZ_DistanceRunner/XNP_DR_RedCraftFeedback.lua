@@ -1,33 +1,17 @@
 require "XNP_PZ_DistanceRunner/XNP_DR_SandboxTuning"
+require "XNP_PZ_DistanceRunner/XNP_DR_B42_20_StatsAdapter"
+require "XNP_PZ_DistanceRunner/XNP_DR_RedPhysicalLoad"
 
 local Core = XNP_PZ_DistanceRunner
+local StatsAdapter = Core.B42_20StatsAdapter
 local Feedback = {
     woundWriteCount = 0,
     infectionWriteCount = 0,
     sessions = 0,
+    cancelledPhysicalWriteCount = 0,
+    failedPhysicalWriteCount = 0,
+    physicalLoadExceptionCount = 0,
 }
-
-local function invoke(object, method, ...)
-    if not object or type(object[method]) ~= "function" then
-        return false, nil
-    end
-    return pcall(object[method], object, ...)
-end
-
-local function boolean(name, fallback)
-    if Core.SandboxTuning and Core.SandboxTuning.GetBoolean then
-        return Core.SandboxTuning.GetBoolean(name, fallback)
-    end
-    return fallback
-end
-
-local function number(name, fallback, minimum, maximum)
-    if Core.SandboxTuning and Core.SandboxTuning.GetNumber then
-        return Core.SandboxTuning.GetNumber(
-            name, fallback, minimum, maximum)
-    end
-    return fallback
-end
 
 local function clamp(value, minimum, maximum)
     return math.max(minimum, math.min(maximum, value))
@@ -44,100 +28,96 @@ local function readProgress(action)
 end
 
 local function readFatigue(player)
-    local statsOk, stats = invoke(player, "getStats")
-    if not statsOk or not stats or not CharacterStat
-        or not CharacterStat.FATIGUE then return nil, nil end
-    local valueOk, value = invoke(stats, "get", CharacterStat.FATIGUE)
-    if not valueOk or tonumber(value) == nil then return nil, nil end
-    return stats, clamp(tonumber(value), 0, 1)
+    if not StatsAdapter then return nil end
+    local value = StatsAdapter.Read(player, "FATIGUE")
+    if tonumber(value) == nil then return nil end
+    return clamp(tonumber(value), 0, 1)
 end
 
 function Feedback.Begin(action, player)
-    local bodyOk, body = invoke(player, "getBodyDamage")
-    local wetOk, wetness = false, nil
-    local tempOk, temperature = false, nil
-    if bodyOk and body then
-        wetOk, wetness = invoke(body, "getWetness")
-        tempOk, temperature = invoke(body, "getTemperature")
-    end
-    local _, fatigue = readFatigue(player)
+    if not action then return false, "ACTION_MISSING" end
     action.xnpRedFeedback = {
-        body = bodyOk and body or nil,
-        initialWetness = wetOk and tonumber(wetness) or nil,
-        initialTemperature = tempOk and tonumber(temperature) or nil,
-        initialFatigue = fatigue,
-        appliedProgress = 0,
-        fatigueSettled = false,
+        initialFatigue = readFatigue(player),
+        observedProgress = 0,
+        settled = false,
+        physicalLoadStarted = false,
     }
     Feedback.sessions = Feedback.sessions + 1
+    return true, "SESSION_STARTED_NO_PHYSICAL_WRITES"
 end
 
-function Feedback.Update(action, player)
+function Feedback.Update(action)
     local state = action and action.xnpRedFeedback
     if not state then return false, "SESSION_MISSING" end
-    local progress = readProgress(action)
-    if progress <= state.appliedProgress then
-        return true, "NO_PROGRESS_DELTA"
-    end
-    state.appliedProgress = progress
-    local intensity = math.floor(number(
-        "RedCraftSweatIntensity", 2, 1, 3) + 0.5)
-    local sweatMaximum = ({ 0.015, 0.030, 0.050 })[intensity] or 0.030
-    if boolean("RedCraftSweatEnabled", true)
-        and state.body and state.initialWetness ~= nil then
-        local target = clamp(
-            state.initialWetness + sweatMaximum * progress, 0, 1)
-        invoke(state.body, "setWetness", target)
-    end
-    if boolean("RedCraftBodyHeatEnabled", true)
-        and state.body and state.initialTemperature ~= nil then
-        local target = clamp(
-            state.initialTemperature + 0.12 * progress, 20, 42)
-        invoke(state.body, "setTemperature", target)
-    end
-    if boolean("RedCraftExertionFeedbackEnabled", true)
-        and player and type(player.setMetabolicTarget) == "function"
-        and Metabolics and Metabolics.LightWork then
-        invoke(player, "setMetabolicTarget", Metabolics.LightWork)
-    end
-    return true, "PROGRESS_APPLIED"
+    state.observedProgress = math.max(
+        state.observedProgress or 0, readProgress(action))
+    return true, "PROGRESS_OBSERVED_NO_PHYSICAL_WRITES"
 end
 
 function Feedback.Settle(action, player, completed)
     local state = action and action.xnpRedFeedback
-    if not state or state.fatigueSettled then
+    if not state or state.settled then
         return false, "ALREADY_SETTLED_OR_MISSING"
     end
-    Feedback.Update(action, player)
-    state.fatigueSettled = true
-    local progress = completed == true and 1
-        or clamp(state.appliedProgress or readProgress(action), 0, 1)
-    local stats, current = readFatigue(player)
-    local percent = number(
-        "RedCraftFatigueCostPercent", 10, 0, 100)
-    local requested = (percent / 100) * progress
-    local after = current
-    local written = false
-    if stats and current ~= nil then
-        after = clamp(current + requested, 0, 1)
-        written = invoke(
-            stats, "set", CharacterStat.FATIGUE, after) == true
+    state.settled = true
+    state.observedProgress = math.max(
+        state.observedProgress or 0, readProgress(action))
+    if completed == true then
+        return false, "COMPLETION_REQUIRES_COMMITTED_TRANSACTION"
     end
-    print("[XNP RED CRAFT FEEDBACK]"
-        .. " completed=" .. tostring(completed == true)
-        .. " progress=" .. tostring(progress)
-        .. " sweat_enabled="
-        .. tostring(boolean("RedCraftSweatEnabled", true))
-        .. " sweat_intensity="
-        .. tostring(number("RedCraftSweatIntensity", 2, 1, 3))
-        .. " body_heat_enabled="
-        .. tostring(boolean("RedCraftBodyHeatEnabled", true))
-        .. " fatigue_before=" .. tostring(current)
-        .. " fatigue_requested=" .. tostring(requested)
-        .. " fatigue_after=" .. tostring(after)
-        .. " fatigue_write=" .. tostring(written)
-        .. " wound_writes=0 infection_writes=0 bounded=true")
-    return written, written and "SETTLED" or "FATIGUE_API_UNAVAILABLE"
+    Feedback.cancelledPhysicalWriteCount =
+        Feedback.cancelledPhysicalWriteCount + 0
+    print("[XNP RED CRAFT FEEDBACK] completed=false"
+        .. " progress=" .. tostring(state.observedProgress)
+        .. " fatigue_write=false physical_write=false"
+        .. " cancellation_cost=ZERO"
+        .. " wound_writes=0 infection_writes=0")
+    return true, "CANCELLED_ZERO_PHYSICAL_WRITE"
+end
+
+function Feedback.MarkCommitted(action, player, transactionInfo)
+    local state = action and action.xnpRedFeedback
+    if not state or state.settled then
+        return false, "ALREADY_SETTLED_OR_MISSING"
+    end
+    state.settled = true
+    state.observedProgress = 1
+    local started, reason, summary = false,
+        "PHYSICAL_LOAD_MODULE_UNAVAILABLE", nil
+    if Core.RedPhysicalLoad
+        and type(Core.RedPhysicalLoad.Start) == "function" then
+        local callOk
+        callOk, started, reason, summary = pcall(
+            Core.RedPhysicalLoad.Start, player, transactionInfo)
+        if not callOk then
+            Feedback.physicalLoadExceptionCount =
+                Feedback.physicalLoadExceptionCount + 1
+            started = false
+            reason = "PHYSICAL_LOAD_EXCEPTION_FAIL_CLOSED"
+            summary = nil
+        end
+    end
+    state.physicalLoadStarted = started == true
+    print("[XNP RED CRAFT FEEDBACK] completed=true progress=1"
+        .. " fatigue_owned_by=CRAFT_TRANSACTION"
+        .. " duplicate_fatigue_write=false"
+        .. " physical_load_started=" .. tostring(started == true)
+        .. " physical_load_reason=" .. tostring(reason)
+        .. " wound_writes=0 infection_writes=0")
+    return started == true, reason, summary
+end
+
+function Feedback.CancelFailedCommit(action)
+    local state = action and action.xnpRedFeedback
+    if not state or state.settled then
+        return false, "ALREADY_SETTLED_OR_MISSING"
+    end
+    state.settled = true
+    Feedback.failedPhysicalWriteCount = Feedback.failedPhysicalWriteCount + 0
+    print("[XNP RED CRAFT FEEDBACK] completed=false"
+        .. " reason=CRAFT_TRANSACTION_FAILED fatigue_write=false"
+        .. " physical_write=false wound_writes=0 infection_writes=0")
+    return true, "FAILED_COMMIT_ZERO_PHYSICAL_WRITE"
 end
 
 function Feedback.GetAuditSnapshot()
@@ -146,9 +126,19 @@ function Feedback.GetAuditSnapshot()
         session_count = Feedback.sessions,
         wound_write_count = Feedback.woundWriteCount,
         infection_write_count = Feedback.infectionWriteCount,
-        bounded_progress_targets = true,
-        cancellation_cost_is_progress_proportional = true,
+        cancelled_physical_write_count =
+            Feedback.cancelledPhysicalWriteCount,
+        failed_physical_write_count = Feedback.failedPhysicalWriteCount,
+        cancellation_cost_is_zero = true,
+        physical_feedback_after_commit_only = true,
+        duplicate_fatigue_write_count = 0,
+        physical_load_exception_count =
+            Feedback.physicalLoadExceptionCount,
     }
+end
+
+function Feedback.GetPhysicalLoadModuleForAudit()
+    return Core.RedPhysicalLoad
 end
 
 Core.RedCraftFeedback = Feedback
