@@ -1,4 +1,6 @@
 require "XNP_PZ_DistanceRunner/XNP_DR_SandboxTuning"
+require "XNP_PZ_DistanceRunner/XNP_DR_ConfigHealthUI"
+require "ISUI/ISContextMenu"
 
 local Core = XNP_PZ_DistanceRunner
 local Tools = {
@@ -136,10 +138,49 @@ local function text(key, fallback)
     return fallback
 end
 
+local function addConfigHealthEntry(player, context)
+    if not player or not context
+        or type(context.addOption) ~= "function" then return false end
+    if Core.ConfigHealthUI and Core.ConfigHealthCore
+        and Core.ConfigHealthCore.IsTestChannel() then
+        local fullTools = enabled()
+        local root = context:addOption(text("ContextMenu_XNPTestTools",
+            "XNP Test Tools"), player, function() end)
+        if ISContextMenu and ISContextMenu.getNew
+            and context.addSubMenu then
+            local sub = ISContextMenu:getNew(context)
+            context:addSubMenu(root, sub)
+            sub:addOption(text(fullTools
+                and "ContextMenu_XNPConfigHealth"
+                or "ContextMenu_XNPConfigHealthReadOnly",
+                fullTools and "Configuration Health Center"
+                    or "Configuration Status (Read Only)"),
+                player, function(p)
+                    Core.ConfigHealthUI.Show(p, not fullTools)
+                end)
+        else
+            addOption(context, text("ContextMenu_XNPConfigHealthReadOnly",
+                "Configuration Status (Read Only)"), function(p)
+                Core.ConfigHealthUI.Show(p, not fullTools)
+            end, player)
+        end
+        return true
+    end
+    return false
+end
+
 function Tools.OnFillInventoryObjectContextMenu(playerIndex, context)
-    if not enabled() then return end
     local player = playerForIndex(playerIndex)
     if not player then return end
+    addConfigHealthEntry(player, context)
+    if not enabled() then return end
+    if Core.B42_20RuntimeDiagnostic
+        and Core.B42_20RuntimeDiagnostic.IsTestChannel() then
+        addOption(context, text("ContextMenu_XNPB4220Diagnostic",
+            "XNP Test Build Diagnostic"), function(p)
+            Core.B42_20RuntimeDiagnostic.Show(p)
+        end, player)
+    end
     addOption(context, text("ContextMenu_XNPTestSpawnShoe10",
         "[XNP TEST] Spawn shoe at 10%"), function(p)
         Tools.Spawn(p, "Base.Shoes_TrainerTINT", 0.10, "SHOE_10")
@@ -162,6 +203,10 @@ function Tools.OnFillInventoryObjectContextMenu(playerIndex, context)
     end, player)
 end
 
+function Tools.OnFillWorldObjectContextMenu(playerIndex, context)
+    addConfigHealthEntry(playerForIndex(playerIndex), context)
+end
+
 function Tools.GetAuditSnapshot()
     return {
         reachable = true,
@@ -170,6 +215,8 @@ function Tools.GetAuditSnapshot()
         clear_count = Tools.clearCount,
         non_owned_item_delete_count = Tools.nonOwnedDeleteCount,
         owner_marker = Tools.OWNER_KEY,
+        registered = Tools.registered,
+        world_context_registered = Tools.worldContextRegistered,
     }
 end
 
@@ -178,6 +225,12 @@ if Events and Events.OnFillInventoryObjectContextMenu
     Events.OnFillInventoryObjectContextMenu.Add(
         Tools.OnFillInventoryObjectContextMenu)
     Tools.registered = true
+end
+if Events and Events.OnFillWorldObjectContextMenu
+    and type(Events.OnFillWorldObjectContextMenu.Add) == "function" then
+    Events.OnFillWorldObjectContextMenu.Add(
+        Tools.OnFillWorldObjectContextMenu)
+    Tools.worldContextRegistered = true
 end
 
 Core.DeveloperTestTools = Tools
