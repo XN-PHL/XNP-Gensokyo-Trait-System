@@ -1,3 +1,10 @@
+local XNPChannelGuard = require "XNP_PZ_DistanceRunner/XNP_DR_ChannelGuard"
+if type(XNPChannelGuard) == "table"
+    and type(XNPChannelGuard.allowRuntime) == "function"
+    and not XNPChannelGuard.allowRuntime() then
+    return
+end
+
 require "XNP_PZ_DistanceRunner/XNP_DR_Constants"
 require "XNP_PZ_DistanceRunner/XNP_DR_Config"
 require "XNP_PZ_DistanceRunner/XNP_DR_SandboxTuning"
@@ -21,6 +28,7 @@ require "XNP_PZ_DistanceRunner/XNP_DR_MoodleStatus"
 require "XNP_PZ_DistanceRunner/XNP_DR_Adrenaline"
 require "XNP_PZ_DistanceRunner/XNP_DR_StaminaDrain"
 require "XNP_PZ_DistanceRunner/XNP_DR_RoundMarkerFrame"
+require "XNP_PZ_DistanceRunner/XNP_DR_VFXManager"
 require "XNP_PZ_DistanceRunner/XNP_DR_RoundMarkerDragController"
 require "XNP_PZ_DistanceRunner/XNP_DR_RoundMarkerTooltip"
 require "XNP_PZ_DistanceRunner/XNP_DR_MapVisibility"
@@ -96,6 +104,7 @@ local function logModuleStartup()
     end
     print("[XNP RUNTIME] module=StatusIconUI loaded=" .. tostring(Core.StatusIconUI ~= nil))
     print("[XNP RUNTIME] module=MasterEffectState loaded=" .. tostring(Core.MasterEffectState ~= nil))
+    print("[XNP RUNTIME] module=VFXManager loaded=" .. tostring(Core.VFXManager ~= nil))
     print("[XNP RUNTIME] module=ImpactQuotaMeter loaded=" .. tostring(Core.ImpactQuotaMeter ~= nil))
     print("[XNP RUNTIME] module=JogBumpLaunch loaded=" .. tostring(Core.JogBumpLaunch ~= nil))
     print("[XNP RUNTIME] module=SprintVehicleImpact loaded=" .. tostring(Core.SprintVehicleImpact ~= nil))
@@ -188,6 +197,9 @@ function Bootstrap.OnGameStart()
     end
     if Core.Runtime then
         Core.Runtime.RebuildTraitUI(player, "GAME_START", traitState)
+    end
+    if Core.B42_20RuntimeDiagnostic then
+        Core.B42_20RuntimeDiagnostic.StartupSelfCheck(player)
     end
     return true
 end
@@ -349,10 +361,6 @@ function Bootstrap.EventAdapters.OnMainMenuEnter()
     return dispatchEvent("CORE", "EVENT_ON_MAIN_MENU_ENTER", Bootstrap.OnMainMenuEnter)
 end
 
-function Bootstrap.EventAdapters.OnGameExit()
-    return dispatchEvent("CORE", "EVENT_ON_GAME_EXIT", Bootstrap.OnGameExit)
-end
-
 function Bootstrap.RegisterEvents()
     -- Refresh the callback in place on Lua reload. The scheduler keeps one
     -- ordered task per stable ID, while the event gate below remains untouched.
@@ -383,9 +391,6 @@ function Bootstrap.RegisterEvents()
     end
     if Events and Events.OnMainMenuEnter then
         Events.OnMainMenuEnter.Add(Bootstrap.EventAdapters.OnMainMenuEnter)
-    end
-    if Events and Events.OnGameExit then
-        Events.OnGameExit.Add(Bootstrap.EventAdapters.OnGameExit)
     end
     if Core.RedGuardianMark then
         Core.RedGuardianMark.RegisterEvents()
