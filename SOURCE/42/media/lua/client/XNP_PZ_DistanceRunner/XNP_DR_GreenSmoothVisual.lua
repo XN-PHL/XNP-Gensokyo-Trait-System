@@ -1,3 +1,12 @@
+local XNPChannelGuard = require "XNP_PZ_DistanceRunner/XNP_DR_ChannelGuard"
+if type(XNPChannelGuard) == "table"
+    and type(XNPChannelGuard.allowRuntime) == "function"
+    and not XNPChannelGuard.allowRuntime() then
+    return
+end
+
+require "XNP_PZ_DistanceRunner/XNP_DR_VFXManager"
+
 local Core = XNP_PZ_DistanceRunner
 
 local Visual = {
@@ -10,9 +19,19 @@ local Visual = {
     CAMERA_REPROJECT_EVERY_FRAME = true,
     SUB_TILE_INTERPOLATION = true,
     INTERPOLATION_ROUTE = "ONE_FIXED_STEP_DELAY_PREVIOUS_TO_CURRENT",
-    CORE_ALPHA_MINIMUM = 0.65,
+    CORE_ALPHA_MINIMUM = 0.90,
+    DEFAULT_VISUAL_STYLE = 6,
+    VISUAL_STYLE_NAMES = {
+        [1] = "STABLE_CORE",
+        [2] = "ENERGY_EFFECT",
+        [3] = "LOW_COST",
+        [4] = "BLOOM_ROTATING_CORE",
+        [5] = "EMERALD_ARC_ORB",
+        [6] = "CORE_ONLY_PROJECTILE",
+    },
+    PROJECTION_HOLD_MS = 100,
     JAVA_WORLD_ENTITY_COUNT = 0,
-    MAX_DRAW_CALLS_PER_ORB = 2,
+    MAX_DRAW_CALLS_PER_ORB = 1,
     DEFAULT_MAXIMUM_FPS = 60,
     activeByCastId = {},
     impactsById = {},
@@ -47,12 +66,45 @@ local Visual = {
     castDrawIsolationFailures = 0,
     impactDrawIsolationFailures = 0,
     terminalDrawNotProvenCount = 0,
+    activeRenderFrames = 0,
+    centerSubmitFrames = 0,
+    centerDrawSuccessFrames = 0,
+    glowSubmitFrames = 0,
+    projectionFailFrames = 0,
+    heldProjectionFrames = 0,
+    centerMissingFrames = 0,
+    maximumConsecutiveCenterMissingFrames = 0,
+    renderSnapshotAllocations = 0,
+    renderSnapshotReuses = 0,
+    renderSnapshotPool = {},
+    renderIntervalSamples = {},
+    lastRenderCallbackMs = nil,
+    qualityTier = 1,
+    qualityTierPending = nil,
+    qualityTierPendingSinceMs = 0,
+    qualityTierChanges = 0,
+    bloomFrames = 0,
+    rotationFrames = 0,
+    trailDrawCalls = 0,
+    reducedFlashingFrames = 0,
+    textureFallbackCount = 0,
 }
 
 local ASSETS = {
     CENTER = { path = "media/textures/Item_XNPGreenOrbWorldCenter.png", width = 68, height = 64 },
     GLOW = { path = "media/textures/Item_XNPGreenOrbWorldGlow.png", width = 88, height = 94 },
     IMPACT = { path = "media/textures/Item_XNPGreenOrbWorldExplosion.png", width = 144, height = 144 },
+    BLOOM_CORE = { path = "media/textures/Item_XNPGreenOrbBloomCore.png", width = 64, height = 64 },
+    BLOOM_RING = { path = "media/textures/Item_XNPGreenOrbBloomRing.png", width = 96, height = 96 },
+    BLOOM_GLOW = { path = "media/textures/Item_XNPGreenOrbBloomGlow.png", width = 128, height = 128 },
+    BLOOM_TRAIL = { path = "media/textures/Item_XNPGreenOrbTrail.png", width = 96, height = 48 },
+    BLOOM_IMPACT = { path = "media/textures/Item_XNPGreenOrbImpactRing.png", width = 128, height = 128 },
+    ARC_CORE = { path = "media/textures/Item_XNPGreenOrbArcCore.png", width = 64, height = 64 },
+    ARC_BAND = { path = "media/textures/Item_XNPGreenOrbArcBand.png", width = 96, height = 96 },
+    ARC_GLOW = { path = "media/textures/Item_XNPGreenOrbArcGlow.png", width = 128, height = 128 },
+    ARC_TRAIL = { path = "media/textures/Item_XNPGreenOrbArcTrail.png", width = 96, height = 48 },
+    ARC_IMPACT = { path = "media/textures/Item_XNPGreenOrbArcImpact.png", width = 128, height = 128 },
+    CORE_ONLY = { path = "media/textures/Item_XNPGreenOrbArcCore.png", width = 64, height = 64 },
 }
 
 local SPIN_FRAMES = {}
@@ -64,24 +116,54 @@ for index = 1, 16 do
     }
 end
 
+local BLOOM_SPIN_FRAMES = {}
+for index = 1, 16 do
+    BLOOM_SPIN_FRAMES[index] = {
+        path = string.format("media/textures/Item_XNPGreenOrbBloomRingSpin%02d.png", index),
+        width = 96,
+        height = 96,
+    }
+end
+
+local ARC_SPIN_FRAMES = {}
+for index = 1, 24 do
+    ARC_SPIN_FRAMES[index] = {
+        path = string.format("media/textures/Item_XNPGreenOrbArcBandSpin%02d.png", index),
+        width = 96,
+        height = 96,
+    }
+end
+
 local DEFAULT_VISUAL_OPTIONS = {
+    visualStyle = 6,
     centerDiameter = 36,
     glowDiameter = 48,
-    spinEnabled = true,
+    spinEnabled = false,
     spinDegreesPerSecond = 220,
     spinFrameCount = 16,
     glowPulseEnabled = true,
-    glowPulseHz = 3.0,
-    glowJitterEnabled = true,
-    glowJitterPixels = 1.5,
-    glowOrbitPixels = 1.0,
+    glowPulseHz = 1.25,
+    glowJitterEnabled = false,
+    glowJitterPixels = 0,
+    glowOrbitPixels = 0,
     glowMinAlpha = 0.42,
-    glowMaxAlpha = 0.90,
-    coreAlpha = 0.98,
+    glowMaxAlpha = 0.75,
+    coreAlpha = 1.0,
     impactVisualLifetimeMs = 140,
     impactVisualScale = 1.0,
     diagnosticBorder = false,
     visualMaximumFps = 60,
+    bloomCoreDiameter = 32,
+    bloomRingDiameter = 48,
+    bloomGlowDiameter = 72,
+    bloomScalePercent = 100,
+    bloomPulseHz = 0.85,
+    bloomGlowMinAlpha = 0.22,
+    bloomGlowMaxAlpha = 0.42,
+    bloomTrailEnabled = true,
+    bloomTrailSegments = 2,
+    bloomReducedFlashing = false,
+    visualQualityPreset = 2,
 }
 
 local function nowMs()
@@ -110,11 +192,89 @@ local function copyVisualOptions(source)
     end
     copy.spinFrameCount = math.max(1, math.min(16,
         math.floor(tonumber(copy.spinFrameCount) or 16)))
+    copy.visualStyle = math.max(1, math.min(6,
+        math.floor(tonumber(copy.visualStyle) or Visual.DEFAULT_VISUAL_STYLE)))
     copy.glowMinAlpha = math.max(0, math.min(tonumber(copy.glowMinAlpha) or 0.42, 1))
     copy.glowMaxAlpha = math.max(copy.glowMinAlpha,
         math.min(tonumber(copy.glowMaxAlpha) or 0.90, 1))
     copy.coreAlpha = math.max(Visual.CORE_ALPHA_MINIMUM,
-        math.min(tonumber(copy.coreAlpha) or 0.98, 1))
+        math.min(tonumber(copy.coreAlpha) or 1.0, 1))
+    copy.bloomTrailSegments = math.max(0, math.min(3,
+        math.floor(tonumber(copy.bloomTrailSegments) or 2)))
+    copy.bloomScalePercent = math.max(50,
+        math.min(tonumber(copy.bloomScalePercent) or 100, 200))
+    copy.visualQualityPreset = math.max(1, math.min(4,
+        math.floor(tonumber(copy.visualQualityPreset) or 2)))
+    if copy.visualStyle == 1 then
+        copy.spinEnabled = false
+        copy.glowPulseHz = math.min(tonumber(copy.glowPulseHz) or 1.25, 1.5)
+        copy.glowJitterEnabled = false
+        copy.glowJitterPixels = 0
+        copy.glowOrbitPixels = 0
+        copy.glowMinAlpha = math.max(0.35, math.min(copy.glowMinAlpha, 0.75))
+        copy.glowMaxAlpha = math.max(copy.glowMinAlpha,
+            math.min(copy.glowMaxAlpha, 0.75))
+        copy.coreAlpha = 1.0
+    elseif copy.visualStyle == 2 then
+        copy.coreAlpha = math.max(0.90, copy.coreAlpha)
+    elseif copy.visualStyle == 3 then
+        copy.spinEnabled = false
+        copy.glowPulseEnabled = false
+        copy.glowJitterEnabled = false
+        copy.coreAlpha = 1.0
+    elseif copy.visualStyle == 4 then
+        copy.spinEnabled = true
+        copy.spinFrameCount = 16
+        copy.spinDegreesPerSecond = math.max(30,
+            math.min(tonumber(copy.spinDegreesPerSecond) or 180, 720))
+        copy.glowPulseEnabled = true
+        copy.glowJitterEnabled = false
+        copy.glowJitterPixels = 0
+        copy.glowOrbitPixels = 0
+        copy.coreAlpha = 1.0
+        copy.bloomPulseHz = math.max(0.20,
+            math.min(tonumber(copy.bloomPulseHz) or 0.85, 2.0))
+        copy.bloomGlowMinAlpha = math.max(0.10,
+            math.min(tonumber(copy.bloomGlowMinAlpha) or 0.22, 0.60))
+        copy.bloomGlowMaxAlpha = math.max(copy.bloomGlowMinAlpha,
+            math.min(tonumber(copy.bloomGlowMaxAlpha) or 0.42, 0.75))
+        if copy.bloomReducedFlashing == true or copy.visualQualityPreset == 4 then
+            copy.bloomReducedFlashing = true
+            copy.bloomPulseHz = math.min(copy.bloomPulseHz, 0.55)
+            copy.bloomGlowMinAlpha = math.max(copy.bloomGlowMinAlpha, 0.24)
+            copy.bloomGlowMaxAlpha = math.min(copy.bloomGlowMaxAlpha, 0.34)
+        end
+    elseif copy.visualStyle == 5 then
+        copy.spinEnabled = true
+        copy.spinFrameCount = 24
+        copy.spinDegreesPerSecond = math.max(30,
+            math.min(tonumber(copy.spinDegreesPerSecond) or 180, 720))
+        copy.glowPulseEnabled = true
+        copy.glowJitterEnabled = false
+        copy.glowJitterPixels = 0
+        copy.glowOrbitPixels = 0
+        copy.coreAlpha = 1.0
+        copy.bloomPulseHz = math.max(0.70,
+            math.min(tonumber(copy.bloomPulseHz) or 0.80, 0.90))
+        copy.bloomGlowMinAlpha = math.max(0.18,
+            math.min(tonumber(copy.bloomGlowMinAlpha) or 0.18, 0.38))
+        copy.bloomGlowMaxAlpha = math.max(copy.bloomGlowMinAlpha,
+            math.min(tonumber(copy.bloomGlowMaxAlpha) or 0.38, 0.38))
+        copy.bloomTrailSegments = math.max(1, math.min(2,
+            math.floor(tonumber(copy.bloomTrailSegments) or 2)))
+    else
+        copy.spinEnabled = false
+        copy.glowPulseEnabled = false
+        copy.glowJitterEnabled = false
+        copy.glowJitterPixels = 0
+        copy.glowOrbitPixels = 0
+        copy.bloomTrailEnabled = false
+        copy.bloomTrailSegments = 0
+        copy.diagnosticBorder = false
+        copy.coreAlpha = 1.0
+        copy.bloomCoreDiameter = math.max(20, math.min(
+            tonumber(copy.bloomCoreDiameter) or 32, 42))
+    end
     copy.visualMaximumFps = math.max(15, math.min(tonumber(copy.visualMaximumFps) or 60, 60))
     return copy
 end
@@ -152,11 +312,62 @@ local function staticApiReady()
 end
 
 function Visual.Preflight()
-    if Visual.preflight then return Visual.preflight end
-    local contracts = { SPIN = {} }
+    local requestedStyle = math.max(1, math.min(6, math.floor(tonumber(
+        Visual.runtimeOptions and Visual.runtimeOptions.visualStyle)
+        or Visual.DEFAULT_VISUAL_STYLE)))
+    if Visual.preflight and Visual.preflight.style == requestedStyle then
+        return Visual.preflight
+    end
+    Visual.preflight = nil
+    local contracts = { SPIN = {}, BLOOM_SPIN = {}, ARC_SPIN = {} }
     local ready = staticApiReady()
     local reason = ready and "READY" or "PROJECTION_VIEWPORT_OR_DRAW_API_UNAVAILABLE"
-    for _, name in ipairs({ "CENTER", "GLOW", "IMPACT" }) do
+    local style = requestedStyle
+    if style == 6 then
+        local primary, primaryReason = textureContract(ASSETS.CORE_ONLY)
+        local stableFallback, stableReason = nil, "NOT_NEEDED"
+        local fallback = "NONE"
+        if not primary then
+            stableFallback, stableReason = textureContract(ASSETS.CENTER)
+            fallback = stableFallback and "TEST5_CORE" or "PROCEDURAL_DOT"
+        end
+        local impact, impactReason = textureContract(ASSETS.IMPACT)
+        contracts.CORE_ONLY = primary or stableFallback
+        contracts.CENTER = stableFallback
+        contracts.IMPACT = impact
+        if not contracts.CORE_ONLY then
+            ready = false
+            reason = "CORE_ONLY_AND_TEST5_CORE_UNAVAILABLE:"
+                .. tostring(primaryReason) .. ":" .. tostring(stableReason)
+        elseif not impact then
+            ready = false
+            reason = "IMPACT:" .. tostring(impactReason)
+        end
+        Visual.preflight = {
+            ready = ready,
+            reason = reason,
+            contracts = contracts,
+            style = style,
+            core_fallback = fallback,
+            spin_group_ready = false,
+            bloom_spin_group_ready = false,
+            arc_spin_group_ready = false,
+            legacy_flight_assets_preloaded = false,
+        }
+        print("[XNP GREEN CORE PREFLIGHT] style=CORE_ONLY_PROJECTILE"
+            .. " core_loaded=" .. tostring(contracts.CORE_ONLY ~= nil)
+            .. " fallback=" .. tostring(fallback)
+            .. " old_spin_loaded=0 bloom_spin_loaded=0 arc_spin_loaded=0"
+            .. " outer_ring_loaded=false arc_band_loaded=false glow_loaded=false"
+            .. " trail_loaded=false per_frame_texture_load_count=0"
+            .. " max_draw_calls_per_orb=1")
+        return Visual.preflight
+    end
+    for _, name in ipairs({
+        "CENTER", "GLOW", "IMPACT", "BLOOM_CORE", "BLOOM_RING",
+        "BLOOM_GLOW", "BLOOM_TRAIL", "BLOOM_IMPACT",
+        "ARC_CORE", "ARC_BAND", "ARC_GLOW", "ARC_TRAIL", "ARC_IMPACT",
+    }) do
         local contract, itemReason = textureContract(ASSETS[name])
         contracts[name] = contract
         if not contract then ready = false; reason = name .. ":" .. tostring(itemReason) end
@@ -165,17 +376,66 @@ function Visual.Preflight()
             .. " texture_basename=" .. tostring(contract and contract.basename or "none")
             .. " reason=" .. tostring(itemReason))
     end
+    local spinMissing = 0
     for index, asset in ipairs(SPIN_FRAMES) do
         local contract, itemReason = textureContract(asset)
         contracts.SPIN[index] = contract
-        if not contract then ready = false; reason = "SPIN_" .. tostring(index) .. ":" .. tostring(itemReason) end
+        if not contract then spinMissing = spinMissing + 1 end
     end
-    Visual.preflight = { ready = ready, reason = reason, contracts = contracts }
+    local bloomSpinMissing = 0
+    for index, asset in ipairs(BLOOM_SPIN_FRAMES) do
+        local contract, itemReason = textureContract(asset)
+        contracts.BLOOM_SPIN[index] = contract
+        if not contract then bloomSpinMissing = bloomSpinMissing + 1 end
+    end
+    local arcSpinMissing = 0
+    for index, asset in ipairs(ARC_SPIN_FRAMES) do
+        local contract = textureContract(asset)
+        contracts.ARC_SPIN[index] = contract
+        if not contract then arcSpinMissing = arcSpinMissing + 1 end
+    end
+    if spinMissing > 0 then
+        for index = 1, #SPIN_FRAMES do
+            contracts.SPIN[index] = contracts.GLOW
+        end
+        Visual.textureFallbackCount = Visual.textureFallbackCount + spinMissing
+        print("[XNP GREEN SMOOTH] spin_group_fallback=STATIC_GLOW missing_frames="
+            .. tostring(spinMissing))
+    end
+    if bloomSpinMissing > 0 then
+        for index = 1, #BLOOM_SPIN_FRAMES do
+            contracts.BLOOM_SPIN[index] = contracts.BLOOM_RING
+        end
+        Visual.textureFallbackCount = Visual.textureFallbackCount
+            + bloomSpinMissing
+        print("[XNP GREEN SMOOTH] bloom_spin_group_fallback=STATIC_RING missing_frames="
+            .. tostring(bloomSpinMissing))
+    end
+    if arcSpinMissing > 0 then
+        for index = 1, #ARC_SPIN_FRAMES do
+            contracts.ARC_SPIN[index] = contracts.ARC_BAND
+        end
+        Visual.textureFallbackCount = Visual.textureFallbackCount + arcSpinMissing
+        print("[XNP GREEN SMOOTH] arc_spin_group_fallback=STATIC_ARC missing_frames="
+            .. tostring(arcSpinMissing))
+    end
+    Visual.preflight = {
+        ready = ready,
+        reason = reason,
+        contracts = contracts,
+        style = style,
+        core_fallback = "LEGACY_STYLE",
+        spin_group_ready = spinMissing == 0,
+        bloom_spin_group_ready = bloomSpinMissing == 0,
+        arc_spin_group_ready = arcSpinMissing == 0,
+    }
     print("[XNP GREEN SMOOTH] preflight_ready=" .. tostring(ready)
         .. " spin_frames_loaded=" .. tostring(#contracts.SPIN)
+        .. " bloom_spin_frames_loaded=" .. tostring(#contracts.BLOOM_SPIN)
+        .. " arc_spin_frames_loaded=" .. tostring(#contracts.ARC_SPIN)
         .. " textures_preloaded_once=true per_frame_texture_load_count=0"
         .. " route=" .. Visual.ROUTE .. " draw_entry=" .. Visual.DRAW_ENTRY
-        .. " max_draw_calls_per_orb=2")
+        .. " max_draw_calls_per_orb=5")
     return Visual.preflight
 end
 
@@ -213,28 +473,10 @@ local function projectionContext(playerNum)
     }, "READY"
 end
 
-local function changed(a, b, epsilon)
-    if a == nil or b == nil then return true end
-    return math.abs(a - b) > (epsilon or 0.0001)
-end
-
 local function project(holder, x, y, z, playerNum, context, epoch, visualTick)
     if not context then return nil, "PROJECTION_CONTEXT_MISSING" end
-    local needsProjection = holder.last_screen_x == nil or holder.last_screen_y == nil
-        or changed(holder.last_projectile_world_x, x, 0.02)
-        or changed(holder.last_projectile_world_y, y, 0.02)
-        or changed(holder.last_projectile_world_z, z, 0.02)
-        or changed(holder.last_camera_offset_x, context.offX)
-        or changed(holder.last_camera_offset_y, context.offY)
-        or changed(holder.last_zoom, context.zoom)
-        or holder.last_viewport ~= context.viewport
-        or holder.last_projection_epoch ~= epoch
-    if holder.last_projection_visual_tick == visualTick and needsProjection then
+    if holder.last_projection_visual_tick == visualTick then
         Visual.duplicateProjectionCount = Visual.duplicateProjectionCount + 1
-    end
-    if not needsProjection then
-        Visual.projectionCacheHits = Visual.projectionCacheHits + 1
-        return holder.last_projected, "CACHE_HIT"
     end
     local okX, rawX = pcall(function() return IsoUtils.XToScreen(x, y, z, 0) end)
     local okY, rawY = pcall(function() return IsoUtils.YToScreen(x, y, z, 0) end)
@@ -280,20 +522,105 @@ end
 local function newCounters()
     return {
         render_callback_frames = 0,
+        active_render_frames = 0,
         projection_success_frames = 0,
+        projection_fail_frames = 0,
+        held_projection_frames = 0,
         inside_viewport_frames = 0,
         draw_attempt_frames = 0,
         draw_call_no_exception_frames = 0,
+        center_submit_frames = 0,
+        center_draw_success_frames = 0,
+        center_missing_frames = 0,
+        consecutive_center_missing_frames = 0,
+        maximum_consecutive_center_missing_frames = 0,
         glow_draw_attempts = 0,
+        glow_submit_frames = 0,
         glow_draw_call_no_exception_frames = 0,
         core_draw_attempts = 0,
         core_draw_call_no_exception_frames = 0,
+        bloom_ring_draw_attempts = 0,
+        bloom_ring_draw_success_frames = 0,
+        bloom_glow_draw_attempts = 0,
+        bloom_glow_draw_success_frames = 0,
+        trail_draw_attempts = 0,
+        trail_draw_success_count = 0,
+        empty_rotation_frame_count = 0,
+        full_projectile_blink_frames = 0,
         draw_exception_count = 0,
         projection_exception_count = 0,
         offscreen_frame_count = 0,
         interpolated_position_frames = 0,
+        render_interval_samples = {},
+        render_interval_p50_ms = 0,
+        render_interval_p95_ms = 0,
+        render_interval_max_ms = 0,
+        last_active_render_ms = nil,
         first_frame_logged = false,
     }
+end
+
+local function desiredQualityTier(activeCount, preset)
+    if preset == 3 then
+        return 4
+    elseif preset == 4 then
+        if activeCount <= 8 then return 3 end
+        return 4
+    end
+    if activeCount <= 4 then return 1 end
+    if activeCount <= 8 then return 2 end
+    if activeCount <= 12 then return 3 end
+    return 4
+end
+
+local function resolveQualityTier(activeCount, preset, currentMs)
+    local desired = desiredQualityTier(activeCount, preset)
+    if desired == Visual.qualityTier then
+        Visual.qualityTierPending = nil
+        Visual.qualityTierPendingSinceMs = 0
+        return Visual.qualityTier
+    end
+    if desired > Visual.qualityTier then
+        Visual.qualityTier = desired
+        Visual.qualityTierPending = nil
+        Visual.qualityTierPendingSinceMs = 0
+        Visual.qualityTierChanges = Visual.qualityTierChanges + 1
+        return Visual.qualityTier
+    end
+    if Visual.qualityTierPending ~= desired then
+        Visual.qualityTierPending = desired
+        Visual.qualityTierPendingSinceMs = currentMs
+    elseif currentMs - Visual.qualityTierPendingSinceMs >= 500 then
+        Visual.qualityTier = desired
+        Visual.qualityTierPending = nil
+        Visual.qualityTierPendingSinceMs = 0
+        Visual.qualityTierChanges = Visual.qualityTierChanges + 1
+    end
+    return Visual.qualityTier
+end
+
+local function recordBoundedSample(samples, value)
+    if value == nil or value < 0 then return end
+    samples[#samples + 1] = value
+    if #samples > 240 then table.remove(samples, 1) end
+end
+
+local function percentile(samples, ratio)
+    if #samples == 0 then return 0 end
+    local copy = {}
+    for index = 1, #samples do copy[index] = samples[index] end
+    table.sort(copy)
+    local selected = math.max(1, math.min(#copy,
+        math.floor((#copy - 1) * ratio + 1.5)))
+    return copy[selected] or 0
+end
+
+local function updateIntervalSummary(counters, currentMs)
+    if counters.last_active_render_ms then
+        recordBoundedSample(counters.render_interval_samples,
+            currentMs - counters.last_active_render_ms)
+    end
+    counters.last_active_render_ms = currentMs
 end
 
 local function isFlightPhase(phase)
@@ -324,28 +651,99 @@ local function interpolatedWorldPosition(state, currentMs)
         alpha, true
 end
 
-local function renderCast(state, currentMs, preflight, contexts, epoch, visualTick)
-    if not state or state.finished == true or not isFlightPhase(state.phase) then return end
+local function renderSnapshot(state)
+    if not state then return nil end
+    local snapshot = table.remove(Visual.renderSnapshotPool)
+    if snapshot then
+        Visual.renderSnapshotReuses = Visual.renderSnapshotReuses + 1
+    else
+        snapshot = {}
+        Visual.renderSnapshotAllocations = Visual.renderSnapshotAllocations + 1
+    end
+    snapshot.owner = state
+    snapshot.id = state.id
+    snapshot.player = state.player
+    snapshot.playerNum = state.playerNum
+    snapshot.phase = state.phase
+    snapshot.mapHidden = state.mapHidden
+    snapshot.startedMs = state.startedMs
+    snapshot.visualOptions = state.visualOptions
+    snapshot.world_x = state.world_x
+    snapshot.world_y = state.world_y
+    snapshot.world_z = state.world_z
+    snapshot.previous_simulation_x = state.previous_simulation_x
+    snapshot.previous_simulation_y = state.previous_simulation_y
+    snapshot.previous_simulation_z = state.previous_simulation_z
+    snapshot.previous_simulation_ms = state.previous_simulation_ms
+    snapshot.current_simulation_x = state.current_simulation_x
+    snapshot.current_simulation_y = state.current_simulation_y
+    snapshot.current_simulation_z = state.current_simulation_z
+    snapshot.current_simulation_ms = state.current_simulation_ms
+    return snapshot
+end
+
+local function releaseRenderSnapshot(snapshot)
+    if not snapshot or #Visual.renderSnapshotPool >= 24 then return end
+    snapshot.owner = nil
+    snapshot.player = nil
+    snapshot.visualOptions = nil
+    Visual.renderSnapshotPool[#Visual.renderSnapshotPool + 1] = snapshot
+end
+
+local function projectedOrHeld(owner, snapshot, renderX, renderY, renderZ,
+        playerNum, context, epoch, visualTick, currentMs)
+    local projected, reason = project(owner, renderX, renderY, renderZ,
+        playerNum, context, epoch, visualTick)
+    if projected then
+        if projected.inside == true then
+            owner.last_valid_projected = projected
+            owner.last_valid_projection_ms = currentMs
+            owner.last_valid_projection_viewport = context and context.viewport or nil
+        end
+        return projected, reason, false
+    end
+    local held = owner.last_valid_projected
+    local heldAt = tonumber(owner.last_valid_projection_ms)
+    if held and held.inside == true and heldAt
+        and currentMs - heldAt <= Visual.PROJECTION_HOLD_MS
+        and context and owner.last_valid_projection_viewport == context.viewport then
+        return held, "HELD_LAST_VALID_PROJECTION", true
+    end
+    return nil, reason, false
+end
+
+local function renderCast(snapshot, currentMs, preflight, contexts, epoch, visualTick)
+    if not snapshot or not isFlightPhase(snapshot.phase) then return end
+    local state = snapshot.owner
     state.inflightDraw = state.inflightDraw or newCounters()
     local counters = state.inflightDraw
     counters.render_callback_frames = counters.render_callback_frames + 1
     state.smoothVisualFrames = counters.render_callback_frames
-    if state.mapHidden == true then return end
-    local playerNum = state.playerNum or playerNumberFromPlayer(state.player)
+    if snapshot.mapHidden == true then return end
+    local playerNum = snapshot.playerNum or playerNumberFromPlayer(snapshot.player)
     if contexts[playerNum] == nil then contexts[playerNum] = projectionContext(playerNum) end
     local renderX, renderY, renderZ, interpolationAlpha, interpolated =
-        interpolatedWorldPosition(state, currentMs)
+        interpolatedWorldPosition(snapshot, currentMs)
     if interpolated then
         counters.interpolated_position_frames = counters.interpolated_position_frames + 1
         Visual.interpolatedPositionCount = Visual.interpolatedPositionCount + 1
         state.lastInterpolationAlpha = interpolationAlpha
     end
-    local projected, projectionReason = project(state, renderX, renderY,
-        renderZ + 0.18, playerNum, contexts[playerNum], epoch, visualTick)
+    local priorScreenX = tonumber(state.last_screen_x)
+    local priorScreenY = tonumber(state.last_screen_y)
+    local projected, projectionReason, held = projectedOrHeld(state, snapshot,
+        renderX, renderY, renderZ + 0.18, playerNum, contexts[playerNum],
+        epoch, visualTick, currentMs)
     if not projected then
         counters.projection_exception_count = counters.projection_exception_count + 1
+        counters.projection_fail_frames = counters.projection_fail_frames + 1
+        Visual.projectionFailFrames = Visual.projectionFailFrames + 1
         Visual.lastFailure = projectionReason or "WORLD_TO_SCREEN_PROJECTION_FAILED"
         return
+    end
+    if held then
+        counters.held_projection_frames = counters.held_projection_frames + 1
+        Visual.heldProjectionFrames = Visual.heldProjectionFrames + 1
     end
     counters.projection_success_frames = counters.projection_success_frames + 1
     if projected.inside ~= true then
@@ -353,9 +751,21 @@ local function renderCast(state, currentMs, preflight, contexts, epoch, visualTi
         return
     end
     counters.inside_viewport_frames = counters.inside_viewport_frames + 1
-    local options = state.visualOptions or Visual.runtimeOptions or DEFAULT_VISUAL_OPTIONS
-    local seconds = math.max(0, currentMs - (state.startedMs or currentMs)) / 1000
-    local phase = (tonumber(state.id) or 0) * 0.73
+    counters.active_render_frames = counters.active_render_frames + 1
+    Visual.activeRenderFrames = Visual.activeRenderFrames + 1
+    updateIntervalSummary(counters, currentMs)
+    local options = snapshot.visualOptions or Visual.runtimeOptions or DEFAULT_VISUAL_OPTIONS
+    local seconds = math.max(0, currentMs - (snapshot.startedMs or currentMs)) / 1000
+    local phase = (tonumber(snapshot.id) or 0) * 0.73
+    local style = math.max(1, math.min(6, math.floor(
+        tonumber(options.visualStyle) or Visual.DEFAULT_VISUAL_STYLE)))
+    local activeCount = math.max(1, Visual.activeCount)
+    local qualityTier = resolveQualityTier(activeCount,
+        tonumber(options.visualQualityPreset) or 2, currentMs)
+    state.visualQualityTier = qualityTier
+    local richBudget = activeCount <= 5
+    local simpleBudget = activeCount <= 12
+    local effectAllowed = style ~= 3 and style ~= 6 and simpleBudget
     local pulse = options.glowPulseEnabled and (0.5 + 0.5 * math.sin(
         seconds * math.pi * 2 * options.glowPulseHz + phase)) or 0.5
     local alpha = options.glowMinAlpha
@@ -368,28 +778,161 @@ local function renderCast(state, currentMs, preflight, contexts, epoch, visualTi
             * options.glowJitterPixels
     end
     counters.draw_attempt_frames = counters.draw_attempt_frames + 1
-    counters.glow_draw_attempts = counters.glow_draw_attempts + 1
-    local glowOk = draw(preflight.contracts.GLOW.texture,
-        projected.screenX + jitterX, projected.screenY + jitterY,
-        options.glowDiameter, options.glowDiameter, alpha * 0.76)
-    if glowOk then
-        counters.glow_draw_call_no_exception_frames =
-            counters.glow_draw_call_no_exception_frames + 1
-    end
-    local spinCount = options.spinEnabled and options.spinFrameCount or 1
-    local rotationCycles = seconds * options.spinDegreesPerSecond / 360
-    local spinIndex = math.floor(rotationCycles * spinCount) % spinCount + 1
-    local spinContract = preflight.contracts.SPIN[spinIndex] or preflight.contracts.SPIN[1]
     counters.core_draw_attempts = counters.core_draw_attempts + 1
-    local coreAlpha = math.max(Visual.CORE_ALPHA_MINIMUM,
-        math.min(tonumber(options.coreAlpha) or 0.98, 1))
-    local coreOk = spinContract and draw(spinContract.texture, projected.screenX, projected.screenY,
-        options.centerDiameter, options.centerDiameter, coreAlpha)
+    counters.center_submit_frames = counters.center_submit_frames + 1
+    Visual.centerSubmitFrames = Visual.centerSubmitFrames + 1
+    local arcScale = style == 5 and (0.98 + 0.10 * (0.5 + 0.5 * math.sin(
+        seconds * math.pi * 2 * options.bloomPulseHz + phase))) or 1
+    local scale = (style == 4 or style == 5)
+        and (math.max(50, math.min(tonumber(options.bloomScalePercent) or 100, 200)) / 100)
+        or 1
+    scale = scale * arcScale
+    local coreAlpha = (style == 4 or style == 5) and 1.0 or math.max(Visual.CORE_ALPHA_MINIMUM,
+        math.min(tonumber(options.coreAlpha) or 1.0, 1))
+    local centerContract = style == 6 and preflight.contracts.CORE_ONLY
+        or (style == 5 and preflight.contracts.ARC_CORE
+        or (style == 4 and preflight.contracts.BLOOM_CORE
+            or preflight.contracts.CENTER))
+    local centerSize = style == 6 and math.max(20, math.min(
+        tonumber(options.bloomCoreDiameter) or 32, 42))
+        or ((style == 4 or style == 5)
+        and (tonumber(options.bloomCoreDiameter) or 32) * scale
+        or options.centerDiameter)
+    local coreOk = centerContract and draw(centerContract.texture,
+        projected.screenX, projected.screenY, centerSize, centerSize, coreAlpha)
     if coreOk then
         counters.core_draw_call_no_exception_frames =
             counters.core_draw_call_no_exception_frames + 1
+        counters.center_draw_success_frames = counters.center_draw_success_frames + 1
+        counters.consecutive_center_missing_frames = 0
+        Visual.centerDrawSuccessFrames = Visual.centerDrawSuccessFrames + 1
+    else
+        counters.center_missing_frames = counters.center_missing_frames + 1
+        counters.consecutive_center_missing_frames =
+            counters.consecutive_center_missing_frames + 1
+        counters.maximum_consecutive_center_missing_frames = math.max(
+            counters.maximum_consecutive_center_missing_frames,
+            counters.consecutive_center_missing_frames)
+        Visual.centerMissingFrames = Visual.centerMissingFrames + 1
+        Visual.maximumConsecutiveCenterMissingFrames = math.max(
+            Visual.maximumConsecutiveCenterMissingFrames,
+            counters.consecutive_center_missing_frames)
     end
-    if glowOk and coreOk then
+    local effectOk = true
+    if style == 4 or style == 5 then
+        Visual.bloomFrames = Visual.bloomFrames + 1
+        if options.bloomReducedFlashing == true then
+            Visual.reducedFlashingFrames = Visual.reducedFlashingFrames + 1
+        end
+        local bloomPulse = 0.5 + 0.5 * math.sin(
+            seconds * math.pi * 2 * options.bloomPulseHz + phase)
+        local bloomAlpha = options.bloomGlowMinAlpha
+            + (options.bloomGlowMaxAlpha - options.bloomGlowMinAlpha) * bloomPulse
+        local spinCount = style == 5 and 24 or 16
+        local rotationCycles = seconds * options.spinDegreesPerSecond / 360
+        local spinIndex = math.floor(rotationCycles * spinCount) % spinCount + 1
+        local ringContract
+        if style == 5 then
+            ringContract = qualityTier <= 3
+                and preflight.contracts.ARC_SPIN[spinIndex]
+                or preflight.contracts.ARC_BAND
+        else
+            ringContract = qualityTier <= 3
+                and preflight.contracts.BLOOM_SPIN[spinIndex]
+                or preflight.contracts.BLOOM_RING
+        end
+        counters.bloom_ring_draw_attempts = counters.bloom_ring_draw_attempts + 1
+        if qualityTier <= 3 then Visual.rotationFrames = Visual.rotationFrames + 1 end
+        local ringOk = ringContract and draw(ringContract.texture,
+            projected.screenX, projected.screenY,
+            (tonumber(options.bloomRingDiameter) or 48) * scale,
+            (tonumber(options.bloomRingDiameter) or 48) * scale,
+            style == 5 and 0.90
+                or (options.bloomReducedFlashing == true and 0.72 or 0.88))
+        if ringOk then
+            counters.bloom_ring_draw_success_frames =
+                counters.bloom_ring_draw_success_frames + 1
+        else
+            counters.empty_rotation_frame_count =
+                counters.empty_rotation_frame_count + 1
+        end
+        effectOk = ringOk == true
+
+        if qualityTier <= 3 then
+            counters.bloom_glow_draw_attempts = counters.bloom_glow_draw_attempts + 1
+            counters.glow_submit_frames = counters.glow_submit_frames + 1
+            Visual.glowSubmitFrames = Visual.glowSubmitFrames + 1
+            local glowContract = style == 5 and preflight.contracts.ARC_GLOW
+                or preflight.contracts.BLOOM_GLOW
+            local glowOk = glowContract and draw(
+                glowContract.texture,
+                projected.screenX, projected.screenY,
+                (tonumber(options.bloomGlowDiameter) or 72) * scale,
+                (tonumber(options.bloomGlowDiameter) or 72) * scale,
+                bloomAlpha)
+            if glowOk then
+                counters.bloom_glow_draw_success_frames =
+                    counters.bloom_glow_draw_success_frames + 1
+            end
+            effectOk = effectOk and glowOk == true
+        end
+
+        local trailSegments = 0
+        if options.bloomTrailEnabled == true and qualityTier <= 2 then
+            trailSegments = qualityTier == 1
+                and options.bloomTrailSegments or math.min(1, options.bloomTrailSegments)
+        end
+        if trailSegments > 0 and priorScreenX and priorScreenY then
+            local dx = projected.screenX - priorScreenX
+            local dy = projected.screenY - priorScreenY
+            local length = math.sqrt(dx * dx + dy * dy)
+            if length > 0.05 then
+                local nx, ny = dx / length, dy / length
+                for index = 1, trailSegments do
+                    counters.trail_draw_attempts = counters.trail_draw_attempts + 1
+                    local offset = math.min(centerSize * 0.35,
+                        centerSize * (0.13 + index * 0.10))
+                    local trailContract = style == 5 and preflight.contracts.ARC_TRAIL
+                        or preflight.contracts.BLOOM_TRAIL
+                    local trailOk = trailContract and draw(
+                        trailContract.texture,
+                        projected.screenX - nx * offset,
+                        projected.screenY - ny * offset,
+                        centerSize * (1.10 + index * 0.10),
+                        centerSize * (0.42 + index * 0.04),
+                        0.24 / index)
+                    if trailOk then
+                        counters.trail_draw_success_count =
+                            counters.trail_draw_success_count + 1
+                        Visual.trailDrawCalls = Visual.trailDrawCalls + 1
+                    end
+                end
+            end
+        end
+    elseif effectAllowed then
+        counters.glow_draw_attempts = counters.glow_draw_attempts + 1
+        local effectContract = preflight.contracts.GLOW
+        local effectAlpha = alpha
+        if style == 2 and richBudget and options.spinEnabled == true then
+            local spinCount = options.spinFrameCount
+            local rotationCycles = seconds * options.spinDegreesPerSecond / 360
+            local spinIndex = math.floor(rotationCycles * spinCount) % spinCount + 1
+            effectContract = preflight.contracts.SPIN[spinIndex]
+                or preflight.contracts.SPIN[1]
+            effectAlpha = math.max(0.35, math.min(alpha, 0.75))
+        else
+            counters.glow_submit_frames = counters.glow_submit_frames + 1
+            Visual.glowSubmitFrames = Visual.glowSubmitFrames + 1
+        end
+        effectOk = effectContract and draw(effectContract.texture,
+            projected.screenX + jitterX, projected.screenY + jitterY,
+            options.glowDiameter, options.glowDiameter, effectAlpha)
+        if effectOk then
+            counters.glow_draw_call_no_exception_frames =
+                counters.glow_draw_call_no_exception_frames + 1
+        end
+    end
+    if coreOk and effectOk then
         counters.draw_call_no_exception_frames = counters.draw_call_no_exception_frames + 1
         Visual.renderedFrames = Visual.renderedFrames + 1
         state.lastSmoothVisualAtMs = currentMs
@@ -409,7 +952,11 @@ local function renderImpact(record, currentMs, preflight, contexts, epoch, visua
     local lifetime = math.max(1, record.expiresAtMs - record.startedMs)
     local progress = math.max(0, math.min((currentMs - record.startedMs) / lifetime, 1))
     local size = (52 + 92 * progress) * record.scale
-    draw(preflight.contracts.IMPACT.texture, projected.screenX, projected.screenY,
+    local impactContract = record.visualStyle == 6 and preflight.contracts.IMPACT
+        or (record.visualStyle == 5 and preflight.contracts.ARC_IMPACT
+        or (record.visualStyle == 4 and preflight.contracts.BLOOM_IMPACT
+            or preflight.contracts.IMPACT))
+    draw(impactContract.texture, projected.screenX, projected.screenY,
         size, size, 1.0 - progress * 0.82)
 end
 
@@ -460,13 +1007,22 @@ local function renderActive()
     end
     Visual.nextVisualUpdateMs = currentMs + (1000 / maximumFps)
     Visual.visualTicks = Visual.visualTicks + 1
+    if Visual.lastRenderCallbackMs then
+        recordBoundedSample(Visual.renderIntervalSamples,
+            currentMs - Visual.lastRenderCallbackMs)
+    end
+    Visual.lastRenderCallbackMs = currentMs
     local preflight = Visual.Preflight()
     if preflight.ready ~= true then return end
     local epoch = Core.MapVisibility and Core.MapVisibility.GetProjectionEpoch()
         or Visual.projectionEpoch
     local contexts = {}
     local casts = {}
-    for _, state in pairs(Visual.activeByCastId) do casts[#casts + 1] = state end
+    for _, state in pairs(Visual.activeByCastId) do
+        if state and state.finished ~= true and state.cleanupComplete ~= true then
+            casts[#casts + 1] = renderSnapshot(state)
+        end
+    end
     table.sort(casts, function(a, b) return tostring(a and a.id) < tostring(b and b.id) end)
     if #casts ~= Visual.activeCount then
         Visual.drawListGapFrames = Visual.drawListGapFrames + 1
@@ -478,6 +1034,7 @@ local function renderActive()
             Visual.castDrawIsolationFailures = Visual.castDrawIsolationFailures + 1
             Visual.lastFailure = "CAST_DRAW_ISOLATED:" .. tostring(reason)
         end
+        releaseRenderSnapshot(state)
     end
     local impacts = {}
     for _, record in pairs(Visual.impactsById) do impacts[#impacts + 1] = record end
@@ -507,8 +1064,7 @@ function Visual.GetProof(state, requiredFrames)
     end
     local ready = counters.projection_success_frames >= required
         and counters.inside_viewport_frames >= required
-        and counters.glow_draw_call_no_exception_frames >= required
-        and counters.core_draw_call_no_exception_frames >= required
+        and counters.center_draw_success_frames >= required
     return {
         ready = ready,
         requiredFrames = required,
@@ -520,12 +1076,27 @@ end
 function Visual.LogSummary(state, requiredFrames)
     local proof = Visual.GetProof(state, requiredFrames)
     local c = proof.counters or newCounters()
+    c.render_interval_p50_ms = percentile(c.render_interval_samples, 0.50)
+    c.render_interval_p95_ms = percentile(c.render_interval_samples, 0.95)
+    c.render_interval_max_ms = percentile(c.render_interval_samples, 1.00)
     if proof.ready ~= true and not (state and state.mapHidden == true) then
         Visual.terminalDrawNotProvenCount = Visual.terminalDrawNotProvenCount + 1
     end
     print("[XNP GREEN FLIGHT DRAW SUMMARY] render_callback_frames=" .. tostring(c.render_callback_frames)
         .. " projection_success_frames=" .. tostring(c.projection_success_frames)
+        .. " projection_fail_frames=" .. tostring(c.projection_fail_frames)
+        .. " held_projection_frames=" .. tostring(c.held_projection_frames)
         .. " inside_viewport_frames=" .. tostring(c.inside_viewport_frames)
+        .. " active_render_frames=" .. tostring(c.active_render_frames)
+        .. " center_submit_frames=" .. tostring(c.center_submit_frames)
+        .. " center_draw_success_frames=" .. tostring(c.center_draw_success_frames)
+        .. " glow_submit_frames=" .. tostring(c.glow_submit_frames)
+        .. " center_missing_frames=" .. tostring(c.center_missing_frames)
+        .. " maximum_consecutive_center_missing_frames="
+        .. tostring(c.maximum_consecutive_center_missing_frames)
+        .. " render_interval_p50_ms=" .. tostring(c.render_interval_p50_ms)
+        .. " render_interval_p95_ms=" .. tostring(c.render_interval_p95_ms)
+        .. " render_interval_max_ms=" .. tostring(c.render_interval_max_ms)
         .. " draw_call_no_exception_frames=" .. tostring(c.draw_call_no_exception_frames)
         .. " draw_exception_count=" .. tostring(c.draw_exception_count)
         .. " projection_exception_count=" .. tostring(c.projection_exception_count)
@@ -535,24 +1106,26 @@ function Visual.LogSummary(state, requiredFrames)
     return proof
 end
 
-local function onPostUIDrawAdapter()
-    return renderActive()
-end
-
 function Visual.Register()
     if Visual.registered then return true end
     if Core.green_smooth_visual_render_registered == true then
         Visual.registered = true
         return true
     end
-    if not Events or not Events.OnPostUIDraw or type(Events.OnPostUIDraw.Add) ~= "function" then
-        Visual.lastFailure = "ON_POST_UI_DRAW_UNAVAILABLE"
+    if not Core.VFXManager
+        or type(Core.VFXManager.RegisterRenderer) ~= "function" then
+        Visual.lastFailure = "VFX_MANAGER_UNAVAILABLE"
         return false
     end
-    Events.OnPostUIDraw.Add(onPostUIDrawAdapter)
+    local registered, reason = Core.VFXManager.RegisterRenderer(
+        "GREEN_PROJECTILE_RENDERER", renderActive)
+    if registered ~= true then
+        Visual.lastFailure = tostring(reason or "VFX_MANAGER_REGISTRATION_FAILED")
+        return false
+    end
     Core.green_smooth_visual_render_registered = true
     Visual.registered = true
-    print("[XNP GREEN SMOOTH] render_callback_registered=true event=OnPostUIDraw callback_count_owned=1")
+    print("[XNP GREEN SMOOTH] renderer_registered=true callback_owner=XNP_DR_VFX_MANAGER callback_count_owned=0")
     return true
 end
 
@@ -573,7 +1146,27 @@ function Visual.Activate(state)
     state.inflightDraw = newCounters()
     state.smoothVisualFrames = 0
     state.lastSmoothVisualAtMs = nil
-    state.visualIdentity = "GREEN_ORB_STABLE_GLOW_AND_CORE"
+    state.visualIdentity = "GREEN_ORB_PERSISTENT_CENTER_"
+        .. tostring(Visual.VISUAL_STYLE_NAMES[state.visualOptions.visualStyle]
+            or "STABLE_CORE")
+    if state.visualOptions.visualStyle == 5 then
+        print("[XNP GREEN STYLE5] cast_id=" .. tostring(state.id)
+            .. " style=EMERALD_ARC_ORB core=true arc_band_count=2"
+            .. " crosshair=false cardinal_spokes=false target_reticle=false"
+            .. " debug_border=false trail_count="
+            .. tostring(state.visualOptions.bloomTrailSegments)
+            .. " glow_hz=" .. tostring(state.visualOptions.bloomPulseHz)
+            .. " glow_alpha_min=" .. tostring(state.visualOptions.bloomGlowMinAlpha)
+            .. " glow_alpha_max=" .. tostring(state.visualOptions.bloomGlowMaxAlpha))
+    elseif state.visualOptions.visualStyle == 6 then
+        print("[XNP GREEN CORE ONLY] cast_id=" .. tostring(state.id)
+            .. " style=CORE_ONLY_PROJECTILE core=true outer_ring=false"
+            .. " rotating_layer=false arc_band_count=0 glow_layer=false"
+            .. " trail_count=0 crosshair=false cardinal_spokes=false"
+            .. " target_reticle=false target_outline=false debug_border=false"
+            .. " draw_calls_per_orb=1 fallback="
+            .. tostring(preflight.core_fallback or "NONE"))
+    end
     return true, Visual.ROUTE
 end
 
@@ -623,6 +1216,7 @@ function Visual.ShowImpact(state)
         startedMs = currentMs,
         expiresAtMs = currentMs + math.max(1, options.impactVisualLifetimeMs),
         scale = options.impactVisualScale,
+        visualStyle = options.visualStyle,
     }
     Visual.impactsById[record.id] = record
     Visual.impactPeakCount = math.max(Visual.impactPeakCount, count + 1)
@@ -662,7 +1256,7 @@ function Visual.GetMetrics()
     return {
         activeCount = Visual.activeCount,
         peakActiveCount = Visual.peakActiveCount,
-        renderCallbackCountOwned = Visual.registered and 1 or 0,
+        renderCallbackCountOwned = 0,
         renderedFrames = Visual.renderedFrames,
         impactPeakCount = Visual.impactPeakCount,
         impactCount = impactCount,
@@ -670,7 +1264,7 @@ function Visual.GetMetrics()
         staleCastPurges = Visual.staleCastPurges,
         staleImpactPurges = Visual.staleImpactPurges,
         perFrameTextureLoadCount = 0,
-        maximumDrawCallsPerOrb = 2,
+        maximumDrawCallsPerOrb = Visual.MAX_DRAW_CALLS_PER_ORB,
         projectionComputations = Visual.projectionComputations,
         projectionCacheHits = Visual.projectionCacheHits,
         duplicateProjectionCount = Visual.duplicateProjectionCount,
@@ -688,6 +1282,32 @@ function Visual.GetMetrics()
         impactDrawIsolationFailures = Visual.impactDrawIsolationFailures,
         terminalDrawNotProvenCount = Visual.terminalDrawNotProvenCount,
         coreAlphaMinimum = Visual.CORE_ALPHA_MINIMUM,
+        defaultVisualStyle = Visual.VISUAL_STYLE_NAMES[Visual.DEFAULT_VISUAL_STYLE],
+        activeRenderFrames = Visual.activeRenderFrames,
+        centerSubmitFrames = Visual.centerSubmitFrames,
+        centerDrawSuccessFrames = Visual.centerDrawSuccessFrames,
+        glowSubmitFrames = Visual.glowSubmitFrames,
+        projectionFailFrames = Visual.projectionFailFrames,
+        heldProjectionFrames = Visual.heldProjectionFrames,
+        centerMissingFrames = Visual.centerMissingFrames,
+        maximumConsecutiveCenterMissingFrames =
+            Visual.maximumConsecutiveCenterMissingFrames,
+        renderIntervalP50Ms = percentile(Visual.renderIntervalSamples, 0.50),
+        renderIntervalP95Ms = percentile(Visual.renderIntervalSamples, 0.95),
+        renderIntervalMaxMs = percentile(Visual.renderIntervalSamples, 1.00),
+        renderAllocationEstimate = Visual.renderSnapshotAllocations,
+        renderSnapshotReuseCount = Visual.renderSnapshotReuses,
+        renderSnapshotPoolSize = #Visual.renderSnapshotPool,
+        immutableRenderSnapshots = true,
+        projectionHoldMaximumMs = Visual.PROJECTION_HOLD_MS,
+        qualityTier = Visual.qualityTier,
+        qualityTierChanges = Visual.qualityTierChanges,
+        qualityTierHysteresisMs = 500,
+        bloomFrames = Visual.bloomFrames,
+        rotationFrames = Visual.rotationFrames,
+        trailDrawCalls = Visual.trailDrawCalls,
+        reducedFlashingFrames = Visual.reducedFlashingFrames,
+        textureFallbackCount = Visual.textureFallbackCount,
     }
 end
 
@@ -696,6 +1316,21 @@ function Visual.ResetPreflight()
 end
 
 function Visual.Shutdown()
+    local metrics = Visual.GetMetrics()
+    print("[XNP GREEN RENDER CONTINUITY] active_render_frames="
+        .. tostring(metrics.activeRenderFrames)
+        .. " center_submit_frames=" .. tostring(metrics.centerSubmitFrames)
+        .. " center_draw_success_frames=" .. tostring(metrics.centerDrawSuccessFrames)
+        .. " glow_submit_frames=" .. tostring(metrics.glowSubmitFrames)
+        .. " projection_fail_frames=" .. tostring(metrics.projectionFailFrames)
+        .. " held_projection_frames=" .. tostring(metrics.heldProjectionFrames)
+        .. " center_missing_frames=" .. tostring(metrics.centerMissingFrames)
+        .. " maximum_consecutive_center_missing_frames="
+        .. tostring(metrics.maximumConsecutiveCenterMissingFrames)
+        .. " render_interval_p50_ms=" .. tostring(metrics.renderIntervalP50Ms)
+        .. " render_interval_p95_ms=" .. tostring(metrics.renderIntervalP95Ms)
+        .. " render_interval_max_ms=" .. tostring(metrics.renderIntervalMaxMs)
+        .. " allocation_estimate=" .. tostring(metrics.renderAllocationEstimate))
     print("[XNP GREEN RENDER CLEANUP] stale_casts_before_shutdown=" .. tostring(Visual.activeCount)
         .. " stale_impacts_before_shutdown=" .. tostring(Visual.GetMetrics().impactCount)
         .. " stale_casts_after_shutdown=0 stale_impacts_after_shutdown=0"
@@ -724,6 +1359,28 @@ function Visual.Shutdown()
     Visual.castDrawIsolationFailures = 0
     Visual.impactDrawIsolationFailures = 0
     Visual.terminalDrawNotProvenCount = 0
+    Visual.activeRenderFrames = 0
+    Visual.centerSubmitFrames = 0
+    Visual.centerDrawSuccessFrames = 0
+    Visual.glowSubmitFrames = 0
+    Visual.projectionFailFrames = 0
+    Visual.heldProjectionFrames = 0
+    Visual.centerMissingFrames = 0
+    Visual.maximumConsecutiveCenterMissingFrames = 0
+    Visual.renderSnapshotAllocations = 0
+    Visual.renderSnapshotReuses = 0
+    Visual.renderSnapshotPool = {}
+    Visual.renderIntervalSamples = {}
+    Visual.lastRenderCallbackMs = nil
+    Visual.qualityTier = 1
+    Visual.qualityTierPending = nil
+    Visual.qualityTierPendingSinceMs = 0
+    Visual.qualityTierChanges = 0
+    Visual.bloomFrames = 0
+    Visual.rotationFrames = 0
+    Visual.trailDrawCalls = 0
+    Visual.reducedFlashingFrames = 0
+    Visual.textureFallbackCount = 0
 end
 
 Core.GreenSmoothVisual = Visual
