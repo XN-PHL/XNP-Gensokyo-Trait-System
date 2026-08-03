@@ -265,7 +265,8 @@ function Snapshot.Build(player, lineage, ownerKey, source)
         build_marker = Core.Constants
             and Core.Constants.BUILD_ID
             or "XNP_PZ_DISTANCE_TRAIT_0560720_PURPLE_SHARED_INPUT_TRAIT_RESTORE_A",
-        game_build_baseline = "42.19.0",
+        game_build_baseline = Core.Constants
+            and Core.Constants.GAME_BUILD_TARGET or "42.20.0",
         payload = payload,
     }
     local valid, checksumOrReason = Codec.ValidateSnapshot(snapshot)
@@ -327,46 +328,146 @@ local function characterTraits(player)
     return traits, "CHARACTER_TRAITS_RESOLVED"
 end
 
-local function clearTraits(player)
+local function traitInventory(player)
     local traits, traitsReason = characterTraits(player)
     if not traits then return false, traitsReason end
     local okKnown, known = invoke(traits, "getKnownTraits")
     if not okKnown or not known then return false, "KNOWN_TRAITS_UNAVAILABLE" end
-    local current, captureReason = javaList(known, function(trait)
+    local entries, reason = javaList(known, function(trait)
         if not trait then return nil, "NULL_TRAIT" end
-        return trait
+        local canonical = TraitCatalog.CanonicalizeTraitId(TraitCatalog.ObjectFullId(trait))
+        return { trait = trait, canonical = canonical }
     end)
-    if not current then return false, captureReason end
-    for _, trait in ipairs(current) do
-        local okRemove = invoke(traits, "remove", trait)
-        if not okRemove then return false, "TRAIT_REMOVE_FAILED:" .. tostring(trait) end
+    if not entries then return false, reason end
+    local groups = {}
+    for _, entry in ipairs(entries) do
+        groups[entry.canonical] = groups[entry.canonical] or {}
+        groups[entry.canonical][#groups[entry.canonical] + 1] = entry
     end
-    return true, "TRAITS_CLEARED_THROUGH_CHARACTER_TRAITS"
+    return traits, entries, groups
 end
 
-local function addTraitGroup(player, objects, stage)
-    local traits, traitsReason = characterTraits(player)
-    if not traits then return false, traitsReason end
+local function reconcileTraits(player, objects, stage)
+    local traits, entries, groups = traitInventory(player)
+    if not traits then return false, entries end
+    local expected, expectedOrder = {}, {}
     for _, trait in ipairs(objects or {}) do
-        local runtimeId = TraitCatalog.ObjectFullId(trait)
-        local okAdd = invoke(traits, "add", trait)
-        if not okAdd then
-            return false, "TRAIT_ADD_FAILED:" .. tostring(stage)
-                .. ":" .. tostring(runtimeId)
-        end
-        local okPresent, present = invoke(traits, "get", trait)
-        print("[XNP PURPLE TRAIT RESTORE APPLY] stage="
-            .. tostring(stage)
-            .. " runtime_id=" .. tostring(runtimeId)
-            .. " object_argument=true"
-            .. " add_route=CharacterTraits:add(CharacterTrait)"
-            .. " immediate_readback=" .. tostring(okPresent and present == true))
-        if not okPresent or present ~= true then
-            return false, "TRAIT_ADD_READBACK_FAILED:"
-                .. tostring(stage) .. ":" .. tostring(runtimeId)
+        local canonical = TraitCatalog.CanonicalizeTraitId(TraitCatalog.ObjectFullId(trait))
+        if canonical ~= "" and not expected[canonical] then
+            expected[canonical] = trait
+            expectedOrder[#expectedOrder + 1] = canonical
         end
     end
-    return true, tostring(stage) .. "_APPLIED_THROUGH_CHARACTER_TRAITS"
+    table.sort(expectedOrder)
+    local adds, removes = 0, 0
+    for _, canonical in ipairs(expectedOrder) do
+        local current = groups[canonical] or {}
+        if #current == 0 then
+            local okAdd = invoke(traits, "add", expected[canonical])
+            if not okAdd then return false, "TRAIT_ADD_FAILED:" .. canonical end
+            adds = adds + 1
+        elseif #current > 1 then
+            for index = 2, #current do
+                if not invoke(traits, "remove", current[index].trait) then
+                    return false, "TRAIT_REMOVE_DUPLICATE_FAILED:" .. canonical
+                end
+                removes = removes + 1
+            end
+        end
+    end
+    local postTraits, postEntries, postGroups = traitInventory(player)
+    if not postTraits then return false, "TRAIT_POST_INVENTORY_FAILED:" .. tostring(postEntries) end
+    local duplicateCount, eachExpectedOne = 0, true
+    for _, list in pairs(postGroups) do if #list > 1 then duplicateCount = duplicateCount + (#list - 1) end end
+    for _, canonical in ipairs(expectedOrder) do
+        if #(postGroups[canonical] or {}) ~= 1 then eachExpectedOne = false end
+    end
+    print("[XNP PURPLE TRAIT RESTORE MULTIPLICITY] stage=" .. tostring(stage)
+        .. " expected_unique=" .. tostring(#expectedOrder)
+        .. " actual_total=" .. tostring(#postEntries)
+        .. " actual_unique=" .. tostring((function() local n=0;for _ in pairs(postGroups) do n=n+1 end;return n end)())
+        .. " duplicate_count=" .. tostring(duplicateCount)
+        .. " adds=" .. tostring(adds) .. " removes=" .. tostring(removes)
+        .. " each_expected_count_one=" .. tostring(eachExpectedOne))
+    if duplicateCount ~= 0 or not eachExpectedOne then return false, "TRAIT_MULTIPLICITY_READBACK_FAILED" end
+    return true, "TRAIT_RECONCILED_ONCE"
+end
+
+local function replaceTraits(player, objects, stage)
+    local traits, entries = traitInventory(player)
+    if not traits then return false, entries end
+    local removed = 0
+    for index = #entries, 1, -1 do
+        if not invoke(traits, "remove", entries[index].trait) then
+            return false, "TRAIT_REPLACE_CLEAR_FAILED:" .. tostring(entries[index].canonical)
+        end
+        removed = removed + 1
+    end
+    local clearedTraits, clearedEntries = traitInventory(player)
+    if not clearedTraits then return false, "TRAIT_REPLACE_CLEAR_READBACK_FAILED:" .. tostring(clearedEntries) end
+    if #clearedEntries ~= 0 then return false, "TRAIT_REPLACE_CLEAR_INCOMPLETE:" .. tostring(#clearedEntries) end
+    local expected, expectedOrder = {}, {}
+    for _, trait in ipairs(objects or {}) do
+        local canonical = TraitCatalog.CanonicalizeTraitId(TraitCatalog.ObjectFullId(trait))
+        if canonical ~= "" and not expected[canonical] then
+            expected[canonical] = trait
+            expectedOrder[#expectedOrder + 1] = canonical
+        end
+    end
+    table.sort(expectedOrder)
+    for _, canonical in ipairs(expectedOrder) do
+        if not invoke(traits, "add", expected[canonical]) then
+            return false, "TRAIT_REPLACE_ADD_FAILED:" .. canonical
+        end
+    end
+    local postTraits, postEntries, postGroups = traitInventory(player)
+    if not postTraits then return false, "TRAIT_REPLACE_POST_READBACK_FAILED:" .. tostring(postEntries) end
+    local duplicates, exact = 0, #postEntries == #expectedOrder
+    for canonical, list in pairs(postGroups) do
+        if #list ~= 1 then duplicates = duplicates + math.max(0, #list - 1) end
+        if not expected[canonical] then exact = false end
+    end
+    for _, canonical in ipairs(expectedOrder) do
+        if #(postGroups[canonical] or {}) ~= 1 then exact = false end
+    end
+    print("[XNP PURPLE TRAIT REPLACEMENT] stage=" .. tostring(stage)
+        .. " current_player_traits_cleared=" .. tostring(removed)
+        .. " record_traits_applied=" .. tostring(#expectedOrder)
+        .. " total_trait_entries=" .. tostring(#postEntries)
+        .. " duplicate_count=" .. tostring(duplicates)
+        .. " exact_record_set=" .. tostring(exact))
+    if duplicates ~= 0 or not exact then return false, "TRAIT_REPLACEMENT_READBACK_FAILED" end
+    return true, "TRAITS_REPLACED_FROM_RECORD"
+end
+
+function Snapshot.RepairTraitMultiplicity(player, reason)
+    local traits, entries, groups = traitInventory(player)
+    if not traits then return false, entries end
+    local removed, duplicateIds = 0, {}
+    for canonical, list in pairs(groups) do
+        if #list > 1 then
+            duplicateIds[#duplicateIds + 1] = canonical
+            for index = 2, #list do
+                if not invoke(traits, "remove", list[index].trait) then
+                    return false, "TRAIT_MULTIPLICITY_REMOVE_FAILED:" .. canonical
+                end
+                removed = removed + 1
+            end
+        end
+    end
+    local postTraits, postEntries, postGroups = traitInventory(player)
+    if not postTraits then return false, "TRAIT_MULTIPLICITY_POST_READ_FAILED:" .. tostring(postEntries) end
+    local duplicates, unique, preUnique = 0, 0, 0
+    for _ in pairs(groups) do preUnique = preUnique + 1 end
+    for _, list in pairs(postGroups) do unique = unique + 1; if #list > 1 then duplicates = duplicates + (#list - 1) end end
+    table.sort(duplicateIds)
+    local duplicateText = #duplicateIds > 0 and table.concat(duplicateIds, ",") or "NONE"
+    print("[XNP TRAIT MULTIPLICITY REPAIR] reason=" .. tostring(reason or "UNSPECIFIED")
+        .. " pre_total=" .. tostring(#entries) .. " pre_unique=" .. tostring(preUnique)
+        .. " duplicate_ids=" .. duplicateText .. " removed_duplicates=" .. tostring(removed)
+        .. " post_total=" .. tostring(#postEntries) .. " post_unique=" .. tostring(unique)
+        .. " post_duplicate_count=" .. tostring(duplicates) .. " legitimate_trait_loss=0")
+    return duplicates == 0, duplicates == 0 and "TRAIT_MULTIPLICITY_REPAIRED" or "TRAIT_MULTIPLICITY_REMAINS"
 end
 
 local function applyPerks(player, perkSnapshots, perkMap)
@@ -389,6 +490,37 @@ local function applyPerks(player, perkSnapshots, perkMap)
         end
     end
     return true, "PERKS_APPLIED"
+end
+
+local function applyQuarterDeltaPerks(player, perkSnapshots, perkMap, targets)
+    local okXp, xp = invoke(player, "getXp")
+    if not okXp or not xp then return false, "XP_OBJECT_UNAVAILABLE" end
+    targets = targets or {}
+    for _, saved in ipairs(perkSnapshots or {}) do
+        local id = tostring(saved.id or "")
+        local perk = perkMap.map[id]
+        if not perk then return false, "PERK_NOT_FOUND:" .. id end
+        local lowerId = string.lower(id)
+        local okCurrent, current = invoke(xp, "getXP", perk)
+        if not okCurrent or tonumber(current) == nil then return false, "PERK_XP_READ_FAILED:" .. id end
+        current = tonumber(current)
+        local snapshotXp = tonumber(saved.xp) or current
+        local target = current
+        if lowerId ~= "fitness" and lowerId ~= "strength" and snapshotXp > current then
+            target = current + (snapshotXp - current) * 0.25
+        end
+        local delta = target - current
+        if delta > 0.0001 and not invoke(xp, "AddXPNoMultiplier", perk, delta) then
+            return false, "PERK_QUARTER_DELTA_WRITE_FAILED:" .. id
+        end
+        local okReadback, readback = invoke(xp, "getXP", perk)
+        readback = okReadback and tonumber(readback) or nil
+        if readback == nil or math.abs(readback - target) > 0.0001 then
+            return false, "PERK_QUARTER_DELTA_READBACK_FAILED:" .. id
+        end
+        targets[id] = target
+    end
+    return true, "PERKS_QUARTER_DELTA_APPLIED"
 end
 
 local function applyKnownRecipes(player, recipes)
@@ -494,7 +626,7 @@ local function refreshDerivedState(player)
     return true, "DERIVED_STATE_REFRESH_REQUESTED"
 end
 
-function Snapshot.ApplyPayload(player, payload)
+function Snapshot.ApplyPayload(player, payload, options)
     if not player or type(payload) ~= "table" then return false, "APPLY_INPUT_INVALID" end
     local okDead, dead = invoke(player, "isDead")
     if okDead and dead == true then return false, "TARGET_PLAYER_DEAD" end
@@ -528,21 +660,18 @@ function Snapshot.ApplyPayload(player, payload)
         { "IDENTITY_PROFESSION_FIRST", function()
             return applyIdentity(player, descriptor, payload, profession)
         end },
-        { "TRAIT_CLEAR", function() return clearTraits(player) end },
-        { "PROFESSION_DERIVED_TRAITS", function()
-            return addTraitGroup(player,
-                resolvedTraits.profession_derived_traits, "PROFESSION_DERIVED_TRAITS")
-        end },
-        { "SNAPSHOT_EXPLICIT_TRAITS", function()
-            return addTraitGroup(player,
-                resolvedTraits.snapshot_explicit_traits, "SNAPSHOT_EXPLICIT_TRAITS")
+        { options and options.replace_traits == true and "TRAIT_REPLACE_FROM_RECORD" or "TRAIT_RECONCILE_ONCE", function()
+            if options and options.replace_traits == true then
+                return replaceTraits(player, resolvedTraits.all, "CLEAR_CURRENT_APPLY_SELECTED_RECORD")
+            end
+            return reconcileTraits(player, resolvedTraits.all, "VERIFY_COUNTS_ADD_MISSING_REMOVE_DUPLICATES")
         end },
         { "PERKS_AND_XP", function()
+            if options and options.perk_mode == "quarter_delta" then
+                options.perk_targets = options.perk_targets or {}
+                return applyQuarterDeltaPerks(player, payload.perks, perkMap, options.perk_targets)
+            end
             return applyPerks(player, payload.perks, perkMap)
-        end },
-        { "MANDATORY_RUNTIME_TRAITS", function()
-            return addTraitGroup(player,
-                resolvedTraits.mandatory_runtime_traits, "MANDATORY_RUNTIME_TRAITS")
         end },
         { "RECIPES", function()
             return applyKnownRecipes(player, payload.known_recipes or {})
@@ -550,24 +679,44 @@ function Snapshot.ApplyPayload(player, payload)
         { "NUTRITION", function() return applyNutrition(player, payload.nutrition) end },
         { "VISUAL", function() return applyVisual(player, descriptor, payload.visual) end },
         { "DERIVED_STATE_REFRESH", function() return refreshDerivedState(player) end },
-        { "FINAL_TRAIT_RECONCILE", function()
-            return addTraitGroup(player, resolvedTraits.all, "FINAL_TRAIT_RECONCILE")
-        end },
     }
     for _, stage in ipairs(stages) do
         local applied, reason = applyStage(stage[1], stage[2])
         if not applied then return false, reason end
     end
-    local matches, readbackReason = Snapshot.ReadbackMatches(player, payload)
+    local matches, readbackReason = Snapshot.ReadbackMatches(player, payload, options)
     if not matches then return false, "READBACK_FAILED:" .. tostring(readbackReason) end
     return true, "PAYLOAD_APPLIED_WITH_CHARACTER_TRAIT_OBJECTS"
 end
 
-function Snapshot.ReadbackMatches(player, expectedPayload)
+function Snapshot.ReadbackMatches(player, expectedPayload, options)
     local normalizedExpected, expectedNormalizeReason = Codec.NormalizePayload(expectedPayload)
     if not normalizedExpected then return false, expectedNormalizeReason end
     local actual, reason = Snapshot.CapturePayload(player)
     if not actual then return false, reason end
+    local inventoryTraits, inventoryEntries, inventoryGroups = traitInventory(player)
+    if not inventoryTraits then
+        return false, "TRAIT_MULTIPLICITY_INVENTORY_UNAVAILABLE:" .. tostring(inventoryEntries)
+    end
+    local duplicateCount, missingOrRepeated = 0, {}
+    for canonical, entries in pairs(inventoryGroups) do
+        if #entries > 1 then duplicateCount = duplicateCount + (#entries - 1) end
+    end
+    for _, expectedId in ipairs(normalizedExpected.trait_state.actual_traits or {}) do
+        local canonical = TraitCatalog.CanonicalizeTraitId(expectedId)
+        local count = #(inventoryGroups[canonical] or {})
+        if count ~= 1 then
+            table.insert(missingOrRepeated, tostring(canonical) .. ":" .. tostring(count))
+        end
+    end
+    print("[XNP PURPLE TRAIT RESTORE MULTIPLICITY] expected_unique="
+        .. tostring(#(normalizedExpected.trait_state.actual_traits or {}))
+        .. " actual_total=" .. tostring(#inventoryEntries)
+        .. " duplicate_count=" .. tostring(duplicateCount)
+        .. " required_count_failures=" .. joinList(missingOrRepeated))
+    if duplicateCount > 0 or #missingOrRepeated > 0 then
+        return false, "TRAIT_MULTIPLICITY_READBACK_FAILED"
+    end
     local expectedChecksum, expectedReason = Codec.PayloadChecksum(normalizedExpected)
     if not expectedChecksum then return false, expectedReason end
     local actualChecksum, actualReason = Codec.PayloadChecksum(actual)
@@ -598,6 +747,17 @@ function Snapshot.ReadbackMatches(player, expectedPayload)
         .. joinList(traitDetails.unexpected_nonmandatory_traits)
         .. " normalized_match=" .. tostring(traitMatches == true))
 
+    if options and options.perk_mode == "quarter_delta" then
+        local actualPerks = {}
+        for _, saved in ipairs(actual.perks or {}) do actualPerks[tostring(saved.id)] = tonumber(saved.xp) end
+        for id, target in pairs(options.perk_targets or {}) do
+            if actualPerks[id] == nil or math.abs(actualPerks[id] - target) > 0.0001 then
+                return false, "QUARTER_DELTA_PERK_READBACK_FAILED:" .. tostring(id)
+            end
+        end
+        if not traitMatches then return false, "TRAIT_REPLACEMENT_SEMANTIC_MISMATCH" end
+        return true, "QUARTER_DELTA_TRAIT_AND_PERK_READBACK_MATCH"
+    end
     local matches, matchReason = Codec.SemanticPayloadMatches(
         normalizedExpected, actual)
     print("[XNP PURPLE SNAPSHOT READBACK] canonical_expected="
