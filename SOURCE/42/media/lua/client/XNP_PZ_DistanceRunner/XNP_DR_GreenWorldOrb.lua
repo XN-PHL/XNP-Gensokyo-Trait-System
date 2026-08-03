@@ -9,6 +9,7 @@ require "XNP_PZ_DistanceRunner/XNP_DR_GreenWorldLight"
 require "XNP_PZ_DistanceRunner/XNP_DR_GreenCenterFire"
 require "XNP_PZ_DistanceRunner/XNP_DR_GreenCenterStructureBreak"
 require "XNP_PZ_DistanceRunner/XNP_DR_CanonicalPlayerIdentity"
+require "XNP_PZ_DistanceRunner/XNP_DR_GreenDoubleClickGate"
 
 local Core = XNP_PZ_DistanceRunner
 
@@ -28,6 +29,8 @@ local Orb = {
     serial = 0,
     mapHidden = false,
     cooldownByPlayer = setmetatable({}, { __mode = "k" }),
+    burstByPlayer = setmetatable({}, { __mode = "k" }),
+    burstSerial = 0,
     outlineOwners = setmetatable({}, { __mode = "k" }),
     outlineSerial = 0,
     failureLogged = {},
@@ -64,6 +67,23 @@ local Orb = {
     perCastSimulationEventCount = 0,
     maximumCatchupStepsObserved = 0,
     droppedCatchupMs = 0,
+    inputRequestSerial = 0,
+    acceptedRequestCount = 0,
+    rejectedRequestCount = 0,
+    acceptedAtMaximumFatigueCount = 0,
+    acceptedAtZeroEnduranceCount = 0,
+    costTransactionCount = 0,
+    silentRejectCount = 0,
+    visualDegradedCastCount = 0,
+    activeSlotLeakCount = 0,
+    burstStartCount = 0,
+    burstContinuationCount = 0,
+    burstRandomDirectionCount = 0,
+    burstWindowClosedCount = 0,
+    cooldownExtensionCount = 0,
+    cooldownResetByContinuationCount = 0,
+    rollingFifoEvictCount = 0,
+    rollingCooldownBypassCount = 0,
 }
 
 local TURN_LEVEL_MAP = { [1] = 45, [2] = 90, [3] = 135, [4] = 180 }
@@ -78,6 +98,20 @@ local function normalizeInputTimestamp(inputTimestampMs)
     local value = tonumber(inputTimestampMs)
     if value == nil or value < 0 then value = nowMs() end
     return math.floor(value + 0.5)
+end
+
+local function headingFromRandomUnit(randomUnit, fallbackX, fallbackY, method)
+    randomUnit = tonumber(randomUnit)
+    if not randomUnit or randomUnit < 0 or randomUnit >= 1
+        or randomUnit ~= randomUnit then
+        return fallbackX, fallbackY, "PLAYER_FORWARD_FALLBACK", nil
+    end
+    local angle = randomUnit * 6.283185307179586
+    local x, y = math.cos(angle), math.sin(angle)
+    if x ~= x or y ~= y then
+        return fallbackX, fallbackY, "PLAYER_FORWARD_FALLBACK", nil
+    end
+    return x, y, method or "RANDOM_UNIT", randomUnit * 360
 end
 
 local function rapidCastHeading(fallbackX, fallbackY, castSerial)
@@ -102,10 +136,7 @@ local function rapidCastHeading(fallbackX, fallbackY, castSerial)
     if randomUnit == nil then
         randomUnit = ((tonumber(castSerial) or 0) * 0.618033988749895) % 1
     end
-    local angle = randomUnit * 6.283185307179586
-    local x, y = math.cos(angle), math.sin(angle)
-    if x ~= x or y ~= y then return fallbackX, fallbackY, "PLAYER_FORWARD_FALLBACK" end
-    return x, y, method
+    return headingFromRandomUnit(randomUnit, fallbackX, fallbackY, method)
 end
 
 local function invoke(object, method, ...)
@@ -142,8 +173,16 @@ end
 -- Called only at admission. Every active cast owns this immutable snapshot.
 local function settings()
     local soundsEnabled = tuningBoolean("EnableSounds", true)
-    local runtimeTestMode = tuningBoolean("GreenRuntimeTestModeEnabled", false)
+    local constants = Core.Constants or {}
+    local greenActiveSkillEnabled = tuningBoolean("GreenActiveSkillEnabled", true)
+    local continuousRollingCastEnabled = tuningBoolean(
+        "GreenContinuousRollingCastEnabled", true)
+    local testChannel = constants.MOD_ID == constants.TEST_MOD_ID
+        and constants.RELEASE_CHANNEL == "B42_20_TEST_WORKSHOP"
+    local runtimeTestMode = testChannel
+        and tuningBoolean("GreenRuntimeTestModeEnabled", false)
     local values = {
+        greenActiveSkillEnabled = greenActiveSkillEnabled,
         cooldownMs = tuningNumber("GreenCooldownSeconds", 5.0, 0.5, 120.0) * 1000,
         cooldownEnabled = tuningBoolean("GreenCooldownEnabled", true),
         runtimeTestMode = runtimeTestMode,
@@ -152,10 +191,10 @@ local function settings()
             and tuningBoolean("GreenRuntimeTestIgnoreResourceAdmission", false),
         testStillApplyCosts = runtimeTestMode
             and tuningBoolean("GreenRuntimeTestStillApplyCosts", true),
-        testAllowMaxFatigue = runtimeTestMode
-            and tuningBoolean("GreenRuntimeTestAllowCastAtMaxFatigue", false),
         testAllowZeroEndurance = runtimeTestMode
             and tuningBoolean("GreenRuntimeTestAllowCastAtZeroEndurance", false),
+        testAllowMaxFatigue = runtimeTestMode
+            and tuningBoolean("GreenRuntimeTestAllowCastAtMaxFatigue", false),
         targetRadius = tuningNumber("GreenTargetSearchRadiusTiles", 19.2, 1.0, 30.0),
         reacquisitionRadius = tuningNumber("GreenTargetReacquisitionRadiusTiles", 19.2, 1.0, 30.0),
         noTargetMs = tuningNumber("GreenNoTargetSearchSeconds", 3.0, 0.1, 10.0) * 1000,
@@ -178,6 +217,15 @@ local function settings()
             tuningNumber("GreenRapidCastRandomDirectionMode", 1, 1, 1) + 0.5),
         rapidCastSpawnAtExactPlayerPosition = tuningBoolean(
             "GreenRapidCastSpawnAtExactPlayerPosition", true),
+        continuousRollingCastEnabled = continuousRollingCastEnabled,
+        -- Production rolling casts deliberately saturate their configured costs
+        -- instead of using the test-channel-only resource admission overrides.
+        productionContinuousRolling = greenActiveSkillEnabled == true
+            and continuousRollingCastEnabled == true,
+        rollingCastRetainedCount = math.floor(tuningNumber(
+            "GreenRollingCastRetainedCount", 19, 1, 20) + 0.5),
+        rollingCastEvictOldestEnabled = tuningBoolean(
+            "GreenRollingCastEvictOldestEnabled", true),
         preLockCruiseSpeed = tuningNumber("GreenPreLockCruiseSpeedTilesPerSecond", 2.0, 0.1, 12.0),
         targetScanIntervalMs = tuningNumber("GreenTargetScanIntervalMs", 150, 50, 1000),
         targetScanStaggerEnabled = tuningBoolean("GreenTargetScanStaggerEnabled", true),
@@ -200,7 +248,7 @@ local function settings()
             "GreenLockedConstantSpeedTilesPerSecond", 4.50, 0.1, 30.0),
         accelerationBlendMs = tuningNumber("GreenAccelerationBlendMs", 300, 1, 3000),
         accelerationTimeToMaxMs = tuningNumber(
-            "GreenAccelerationTimeToMaxSeconds", 6.0, 0.5, 15.0) * 1000,
+            "GreenAccelerationTimeToMaxSeconds", 4.5, 0.5, 15.0) * 1000,
         accelerationNoticeableByMs = tuningNumber(
             "GreenAccelerationNoticeableBySeconds", 1.5, 0.1, 5.0) * 1000,
         accelerationCurveMode = math.floor(
@@ -214,16 +262,20 @@ local function settings()
         guidanceSampleIntervalMs = tuningNumber(
             "GreenGuidanceTargetSampleIntervalMs", 150, 50, 500),
         guidanceTurnLevel = math.floor(tuningNumber("GreenGuidanceTurnLevel", 4, 1, 4) + 0.5),
+        guidanceTurnDegreesPerSecond = tuningNumber(
+            "GreenGuidanceTurnDegreesPerSecond", 150, 15, 360),
         guidanceRetargetAdaptationMs = tuningNumber(
             "GreenGuidanceRetargetAdaptationMs", 350, 0, 1500),
         guidanceTargetLostBallisticMs = tuningNumber(
             "GreenGuidanceTargetLostBallisticMs", 250, 0, 1000),
         guidanceLeadPredictionSeconds = tuningNumber(
             "GreenGuidanceLeadPredictionSeconds", 0.20, 0, 1),
-        targetFlashEnabled = tuningBoolean("GreenTargetFlashEnabled", true),
+        targetFlashEnabled = tuningBoolean("GreenTargetFlashEnabled", false),
         targetFlashIntervalMs = tuningNumber("GreenTargetFlashIntervalMs", 500, 100, 5000),
         targetFlashDurationMs = tuningNumber("GreenTargetFlashDurationMs", 120, 30, 1000),
         targetFlashStaggerEnabled = tuningBoolean("GreenTargetFlashStaggerEnabled", true),
+        targetFeedbackMode = math.floor(
+            tuningNumber("GreenTargetFeedbackMode", 0, 0, 3) + 0.5),
         lethalRadius = tuningNumber("GreenLethalRadiusTiles", 3.5, 0.1, 15.0),
         knockdownRadius = tuningNumber("GreenKnockdownRadiusTiles", 7.0, 0.1, 20.0),
         outerKnockdownEnabled = tuningBoolean("GreenOuterKnockdownEnabled", true),
@@ -253,16 +305,30 @@ local function settings()
         impactSound = soundsEnabled and tuningBoolean("GreenImpactSoundEnabled", true),
         impactSoundVolumePercent = tuningNumber(
             "GreenImpactSoundVolumePercent", 100, 0, 100),
+        visualStyle = math.floor(tuningNumber("GreenOrbVisualStyle", 6, 1, 6) + 0.5),
         spinEnabled = tuningBoolean("GreenOrbSpinEnabled", true),
-        spinDegreesPerSecond = tuningNumber("GreenOrbSpinDegreesPerSecond", 220, 0, 1080),
+        spinDegreesPerSecond = tuningNumber("GreenOrbSpinDegreesPerSecond", 180, 0, 1080),
         spinFrameCount = math.floor(tuningNumber("GreenOrbSpinFrameCount", 16, 1, 16) + 0.5),
         glowPulseEnabled = tuningBoolean("GreenOrbGlowPulseEnabled", true),
-        glowPulseHz = tuningNumber("GreenOrbGlowPulseHz", 3.0, 0.1, 12.0),
-        glowJitterEnabled = tuningBoolean("GreenOrbGlowJitterEnabled", true),
-        glowJitterPixels = tuningNumber("GreenOrbGlowJitterPixels", 1.5, 0, 6.0),
-        glowOrbitPixels = tuningNumber("GreenOrbGlowOrbitPixels", 1.0, 0, 6.0),
+        glowPulseHz = tuningNumber("GreenOrbGlowPulseHz", 1.25, 0.1, 12.0),
+        glowJitterEnabled = tuningBoolean("GreenOrbGlowJitterEnabled", false),
+        glowJitterPixels = tuningNumber("GreenOrbGlowJitterPixels", 0, 0, 6.0),
+        glowOrbitPixels = tuningNumber("GreenOrbGlowOrbitPixels", 0, 0, 6.0),
         glowMinAlpha = tuningNumber("GreenOrbGlowMinAlpha", 0.42, 0, 1),
-        glowMaxAlpha = tuningNumber("GreenOrbGlowMaxAlpha", 0.90, 0, 1),
+        glowMaxAlpha = tuningNumber("GreenOrbGlowMaxAlpha", 0.75, 0, 1),
+        bloomCoreDiameter = tuningNumber("GreenBloomCoreDiameterPx", 32, 20, 42),
+        bloomRingDiameter = tuningNumber("GreenBloomRingDiameterPx", 48, 28, 96),
+        bloomGlowDiameter = tuningNumber("GreenBloomGlowDiameterPx", 72, 40, 144),
+        bloomScalePercent = tuningNumber("GreenBloomScalePercent", 100, 50, 200),
+        bloomPulseHz = tuningNumber("GreenBloomPulseHz", 0.85, 0.20, 2.0),
+        bloomGlowMinAlpha = tuningNumber("GreenBloomGlowMinAlpha", 0.22, 0.10, 0.60),
+        bloomGlowMaxAlpha = tuningNumber("GreenBloomGlowMaxAlpha", 0.42, 0.10, 0.75),
+        bloomTrailEnabled = tuningBoolean("GreenBloomTrailEnabled", true),
+        bloomTrailSegments = math.floor(
+            tuningNumber("GreenBloomTrailSegments", 2, 0, 3) + 0.5),
+        bloomReducedFlashing = tuningBoolean("GreenBloomReducedFlashing", false),
+        visualQualityPreset = math.floor(
+            tuningNumber("XNPVisualQualityPreset", 2, 1, 4) + 0.5),
         inflightDiagnosticBorder = tuningBoolean("GreenInflightDiagnosticBorderEnabled", false),
         dynamicLightEnabled = tuningBoolean("GreenDynamicLightEnabled", true),
         dynamicLightFlightEnabled = tuningBoolean("GreenDynamicLightFlightEnabled", true),
@@ -295,13 +361,15 @@ local function settings()
         centerBreakWallsEnabled = false,
         centerBreakFurnitureEnabled = false,
     }
-    values.guidanceMaxTurnRateDegPerSecond = TURN_LEVEL_MAP[values.guidanceTurnLevel] or 180
+    -- The explicit degrees-per-second option is the sole effective owner in test.8.
+    -- GreenGuidanceTurnLevel remains readable for save and UI compatibility only.
+    values.guidanceMaxTurnRateDegPerSecond = values.guidanceTurnDegreesPerSecond
     values.lockedMaxSpeed = math.min(values.lockedMaxSpeed, values.virtualHardCap)
     return values
 end
 
 function Orb.IsRuntimeTestModeEnabled()
-    return tuningBoolean("GreenRuntimeTestModeEnabled", false) == true
+    return settings().runtimeTestMode == true
 end
 
 local function playerNumber(player)
@@ -314,6 +382,42 @@ local function tableCount(values)
     local count = 0
     for _ in pairs(values or {}) do count = count + 1 end
     return count
+end
+
+local function resourceValue(player, stat)
+    if not player or not stat then return nil end
+    local statsOk, stats = invoke(player, "getStats")
+    if not statsOk or not stats then return nil end
+    local valueOk, value = invoke(stats, "get", stat)
+    return valueOk and tonumber(value) or nil
+end
+
+local function logRejected(transaction, reason, stage)
+    Orb.rejectedRequestCount = Orb.rejectedRequestCount + 1
+    local player = transaction and transaction.player or nil
+    local playerNum = playerNumber(player)
+    local fatigue = resourceValue(player, CharacterStat and CharacterStat.FATIGUE or nil)
+    local endurance = resourceValue(player, CharacterStat and CharacterStat.ENDURANCE or nil)
+    local cooldownRemaining = math.max(0,
+        ((Orb.cooldownByPlayer[player] or 0) - nowMs()) / 1000)
+    local traitPresent = Core.ExtraTraits and player
+        and Core.ExtraTraits.PlayerHas(player, "GREEN") == true
+    local fatigueText = fatigue and string.format("%.6f", fatigue) or "nil"
+    local enduranceText = endurance and string.format("%.6f", endurance) or "nil"
+    print("[XNP GREEN CAST REJECTED]"
+        .. " request_id=" .. tostring(transaction and transaction.requestId or "NONE")
+        .. " source=" .. tostring(transaction and transaction.source or "UNKNOWN")
+        .. " stage=" .. tostring(stage or "ADMISSION")
+        .. " reason=" .. tostring(reason or "UNKNOWN")
+        .. " fatigue=" .. fatigueText
+        .. " endurance=" .. enduranceText
+        .. " cooldown_remaining_seconds=" .. string.format("%.3f", cooldownRemaining)
+        .. " active_casts_player="
+        .. tostring(tableCount(Orb.activeCastsByPlayer[playerNum]))
+        .. " active_casts_global=" .. tostring(Orb.activeCountGlobal)
+        .. " ui_state=" .. tostring(transaction and transaction.source or "UNKNOWN")
+        .. " trait_present=" .. tostring(traitPresent)
+        .. " existing_casts_preserved=true cost=false sound=false cooldown=false")
 end
 
 local function castBucket(playerNum, create)
@@ -366,8 +470,21 @@ end
 local function castSnapshot(playerNum)
     local result = {}
     for _, state in pairs(castBucket(playerNum, false) or {}) do result[#result + 1] = state end
-    table.sort(result, function(a, b) return (a.id or 0) < (b.id or 0) end)
+    table.sort(result, function(a, b)
+        local aSpawn, bSpawn = tonumber(a.startedMs) or 0, tonumber(b.startedMs) or 0
+        if aSpawn ~= bSpawn then return aSpawn < bSpawn end
+        return (a.id or 0) < (b.id or 0)
+    end)
     return result
+end
+
+local function oldestRollingVictim(playerNum, newState)
+    for _, candidate in ipairs(castSnapshot(playerNum)) do
+        if candidate ~= newState and candidate.cleanupComplete ~= true then
+            return candidate
+        end
+    end
+    return nil
 end
 
 local function allCastSnapshot()
@@ -913,6 +1030,25 @@ local function angleDelta(from, target)
     return delta
 end
 
+local function colorSignature(color)
+    if color == nil then return nil end
+    local values = {}
+    for index, spec in ipairs({
+        { "r", "getR" }, { "g", "getG" },
+        { "b", "getB" }, { "a", "getA" },
+    }) do
+        local directOk, direct = pcall(function() return color[spec[1]] end)
+        local value = directOk and tonumber(direct) or nil
+        if value == nil then
+            local methodOk, methodValue = invoke(color, spec[2])
+            value = methodOk and tonumber(methodValue) or nil
+        end
+        if value == nil then return tostring(color) end
+        values[index] = math.floor(value * 10000 + 0.5) / 10000
+    end
+    return table.concat(values, ":")
+end
+
 local function clearTargetFlash(state)
     local record = state and state.targetFlashRecord or nil
     if not record then return true, "NO_FLASH_OWNED" end
@@ -921,7 +1057,8 @@ local function clearTargetFlash(state)
     if record.target and Orb.outlineOwners[record.target] == record.token then
         local highlightOk, highlighted = invoke(record.target, "isOutlineHighlight", record.playerNum)
         local colorOk, color = invoke(record.target, "getOutlineHighlightCol", record.playerNum)
-        if highlightOk and highlighted == true and colorOk and color == record.ownedColor then
+        if highlightOk and highlighted == true and colorOk
+            and colorSignature(color) == record.ownedColorSignature then
             invoke(record.target, "setOutlineHighlight", record.playerNum, false)
         end
         Orb.outlineOwners[record.target] = nil
@@ -935,7 +1072,81 @@ local function updateTargetFlash(state, now)
         clearTargetFlash(state)
         return
     end
-    if state.options.targetFlashEnabled ~= true or not state.target then return end
+    local mode = math.max(0, math.min(2,
+        math.floor(tonumber(state.options.targetFeedbackMode) or 0)))
+    if state.options.targetFlashEnabled ~= true or not state.target or mode == 0 then
+        clearTargetFlash(state)
+        return
+    end
+    if mode == 2 then
+        local target = state.target
+        local playerNum = state.playerNum
+        local record = state.targetFlashRecord
+        if record and record.target ~= target then
+            clearTargetFlash(state)
+            record = nil
+        end
+        if record and Orb.outlineOwners[target] ~= record.token then
+            state.targetFlashRecord = nil
+            record = nil
+        end
+        if not record then
+            local existingOk, existing = invoke(target, "isOutlineHighlight", playerNum)
+            if not existingOk or existing == true then return end
+            Orb.outlineSerial = Orb.outlineSerial + 1
+            local token = "xnp-green-target-pulse-" .. tostring(state.id)
+                .. "-" .. tostring(Orb.outlineSerial)
+            local colorOk = invoke(target, "setOutlineHighlightCol",
+                playerNum, 0.08, 1.0, 0.18, 0.45)
+            local outlineOk = invoke(target, "setOutlineHighlight", playerNum, true)
+            local ownedColorOk, ownedColor = invoke(target,
+                "getOutlineHighlightCol", playerNum)
+            local ownedColorSignature = ownedColorOk
+                and colorSignature(ownedColor) or nil
+            if colorOk and outlineOk and ownedColorSignature then
+                Orb.outlineOwners[target] = token
+                record = {
+                    target = target,
+                    token = token,
+                    playerNum = playerNum,
+                    ownedColorSignature = ownedColorSignature,
+                    startedMs = now,
+                }
+                state.targetFlashRecord = record
+                state.targetFlashEndsMs = nil
+            elseif outlineOk then
+                invoke(target, "setOutlineHighlight", playerNum, false)
+            end
+        end
+        if record and Orb.outlineOwners[target] == record.token then
+            local highlightedOk, highlighted = invoke(target,
+                "isOutlineHighlight", playerNum)
+            local currentColorOk, currentColor = invoke(target,
+                "getOutlineHighlightCol", playerNum)
+            if not highlightedOk or highlighted ~= true
+                or not currentColorOk
+                or colorSignature(currentColor) ~= record.ownedColorSignature then
+                Orb.outlineOwners[target] = nil
+                state.targetFlashRecord = nil
+                return
+            end
+            local reduced = state.options.bloomReducedFlashing == true
+            local frequency = reduced and 0.50 or 0.85
+            local minimum = reduced and 0.30 or 0.24
+            local maximum = reduced and 0.50 or 0.68
+            local seconds = math.max(0, now - (record.startedMs or now)) / 1000
+            local wave = 0.5 + 0.5 * math.sin(seconds * math.pi * 2 * frequency)
+            local alpha = minimum + (maximum - minimum) * wave
+            local colorOk = invoke(target, "setOutlineHighlightCol",
+                playerNum, 0.08, 1.0, 0.18, alpha)
+            local ownedColorOk, ownedColor = invoke(target,
+                "getOutlineHighlightCol", playerNum)
+            if colorOk and ownedColorOk then
+                record.ownedColorSignature = colorSignature(ownedColor)
+            end
+        end
+        return
+    end
     if now < (state.nextTargetFlashMs or 0) then return end
     clearTargetFlash(state)
     state.nextTargetFlashMs = now + state.options.targetFlashIntervalMs
@@ -1037,19 +1248,21 @@ local function preflightCosts(state)
                 and ((item.direction > 0 and before >= 0.999)
                     or (item.direction < 0 and before <= 0.001))
             local runtimeTest = state.options.runtimeTestMode == true
-            local ignoreAllAdmission = runtimeTest
+            local debugResourceAdmission = runtimeTest
                 and state.options.testIgnoreResourceAdmission == true
-            local ignoreThisAdmission = ignoreAllAdmission
-                or (runtimeTest and item.name == "fatigue"
-                    and state.options.testAllowMaxFatigue == true)
-                or (runtimeTest and item.name == "endurance"
-                    and state.options.testAllowZeroEndurance == true)
+            local productionContinuousRolling = state.options.productionContinuousRolling == true
+            local ignoreThisAdmission = productionContinuousRolling
+                or (debugResourceAdmission
+                and ((item.name == "endurance"
+                        and state.options.testAllowZeroEndurance == true)
+                    or (item.name == "fatigue"
+                        and state.options.testAllowMaxFatigue == true)))
             if not ignoreThisAdmission then
-                if item.name == "fatigue" and after >= 1 and before >= 1 then
-                    return false, "MAX_FATIGUE_RESOURCE_ADMISSION"
-                end
                 if item.name == "endurance" and after <= 0 and before <= 0 then
                     return false, "ZERO_ENDURANCE_RESOURCE_ADMISSION"
+                end
+                if item.name == "fatigue" and after >= 1 and before >= 0.999 then
+                    return false, "MAX_FATIGUE_RESOURCE_ADMISSION"
                 end
             end
             state.costs[#state.costs + 1] = {
@@ -1141,6 +1354,7 @@ local function chargeCostsOnce(state)
         end
     end
     state.costsCharged = true
+    Orb.costTransactionCount = Orb.costTransactionCount + 1
     logCostTransaction(state, true)
     return true, "COSTS_CHARGED_ONCE"
 end
@@ -1398,6 +1612,10 @@ local function finallyCleanupCast(state, reason)
     local preserveDeferredImpact = reason == "ANY_VALID_COLLISION"
     local pendingRemoved = preserveDeferredImpact and 0 or removePendingImpactReferences(castId)
     local removed, unregisterReason = unregisterCast(state)
+    local playerBucket = Orb.activeCastsByPlayer[state.playerNum]
+    local slotReleased = Orb.activeCastsById[castId] == nil
+        and (not playerBucket or playerBucket[castId] == nil)
+    if not slotReleased then Orb.activeSlotLeakCount = Orb.activeSlotLeakCount + 1 end
     state.cleanupComplete = true
     state.finished = true
     state.cleanupStarted = false
@@ -1417,6 +1635,8 @@ local function finallyCleanupCast(state, reason)
         .. " visual_reason=" .. tostring(visualReason)
         .. " unregister_removed=" .. tostring(removed)
         .. " unregister_reason=" .. tostring(unregisterReason)
+        .. " active_slot_released=" .. tostring(slotReleased)
+        .. " active_slot_leak_count=" .. tostring(Orb.activeSlotLeakCount)
         .. " reservation_released=true light_removed=" .. tostring(lightRemoved)
         .. " render_proxy_removed=" .. tostring(renderProxyRemoved)
         .. " pending_effect_references_removed=" .. tostring(pendingRemoved)
@@ -1446,7 +1666,17 @@ local function expireByLifetime(state, now)
 end
 
 local function refundCooldown(state)
-    if state and state.player then Orb.cooldownByPlayer[state.player] = state.cooldownBefore or 0 end
+    if not state or not state.player or state.cooldownOwner ~= true then return false end
+    local burst = Orb.burstByPlayer[state.player]
+    if not burst or burst.id ~= state.burstId
+        or burst.cooldownDeadlineMs ~= state.burstCooldownDeadlineMs
+        or (Orb.cooldownByPlayer[state.player] or 0) ~= state.burstCooldownDeadlineMs then
+        return false
+    end
+    Orb.cooldownByPlayer[state.player] = state.cooldownBefore or 0
+    burst.cooldownDeadlineMs = state.cooldownBefore or 0
+    burst.cooldownRefunded = true
+    return true
 end
 
 local function abortVisualTransaction(state, reason, refund)
@@ -1459,16 +1689,31 @@ end
 
 local function completeImpactTransaction(state, reason, now)
     if not state or state.resolved then return false, "ALREADY_RESOLVED" end
-    local proof = Core.GreenSmoothVisual.GetProof(state, state.options.projectileArmRenderFrames)
-    if proof.ready ~= true then
+    local proof = { ready = false }
+    if state.visualReady == true and Core.GreenSmoothVisual
+        and type(Core.GreenSmoothVisual.GetProof) == "function" then
+        local ok, result = pcall(Core.GreenSmoothVisual.GetProof,
+            state, state.options.projectileArmRenderFrames)
+        if ok and type(result) == "table" then proof = result end
+    end
+    if state.visualReady == true and proof.ready ~= true then
         print("[XNP GREEN INFLIGHT] cast_id=" .. tostring(state.id)
             .. " proof_ready=false diagnostic_only=true impact_transaction_preserved=true")
     end
     clearTargetFlash(state)
-    local visible, visibleMethod = Core.GreenVisibleProxy.ShowImpact(state)
-    if visible ~= true or Core.GreenVisibleProxy.ConfirmImpact(state) ~= true then
-        abortVisualTransaction(state, "SHOW_IMPACT_FAILED:" .. tostring(visibleMethod), true)
-        return false, "IMPACT_VISUAL_NOT_CONFIRMED"
+    local visible, visibleMethod = false, "VISUAL_DEGRADED_AT_ADMISSION"
+    if state.visualReady == true then
+        local showOk, result, method = pcall(Core.GreenVisibleProxy.ShowImpact, state)
+        visible = showOk and result == true
+        visibleMethod = showOk and method or result
+        local confirmOk, confirmed = pcall(Core.GreenVisibleProxy.ConfirmImpact, state)
+        if not visible or not confirmOk or confirmed ~= true then
+            state.visualReady = false
+            state.visualDegraded = true
+            state.visualFailureReason = "SHOW_IMPACT_FAILED:" .. tostring(visibleMethod)
+            Orb.visualDegradedCastCount = Orb.visualDegradedCastCount + 1
+            logFailureOnce(state, state.visualFailureReason)
+        end
     end
     state.resolved = true
     notifyIcon("IMPACT")
@@ -1505,6 +1750,9 @@ local function completeImpactTransaction(state, reason, now)
         .. ">CLEANUP_PROJECTILE"
         .. " cast_id=" .. tostring(state.id)
         .. " trigger=" .. tostring(reason)
+        .. " visual_ready=" .. tostring(state.visualReady == true)
+        .. " visual_method=" .. tostring(visibleMethod)
+        .. " visual_failure_blocks_gameplay=false"
         .. " contact_to_damage_same_update=true damage_delay_ms=0"
         .. " sound_ok=" .. tostring(soundOk)
         .. " sound_method=" .. tostring(soundMethod)
@@ -1580,6 +1828,27 @@ local function updateInertialHeading(state, delta, now)
     state.maxObservedTurnDeg = math.max(state.maxObservedTurnDeg, math.deg(math.abs(appliedTurn)))
 end
 
+local function accelerationSpeedAtElapsed(startSpeed, maximumSpeed, elapsedMs,
+        timeToMaxMs, noticeableByMs, curveMode)
+    local progress = math.max(0, math.min(
+        elapsedMs / math.max(timeToMaxMs, 1), 1))
+    local noticeableProgress = math.max(0.05, math.min(
+        noticeableByMs / math.max(timeToMaxMs, 1), 0.95))
+    local noticeableGain = 0.35
+    local curve = progress
+    if curveMode == 1 then
+        if progress <= noticeableProgress then
+            local early = progress / noticeableProgress
+            curve = noticeableGain * (early * (2 - early))
+        else
+            local late = (progress - noticeableProgress) / (1 - noticeableProgress)
+            local smoothLate = late * late * (3 - 2 * late)
+            curve = noticeableGain + (1 - noticeableGain) * smoothLate
+        end
+    end
+    return startSpeed + (maximumSpeed - startSpeed) * curve, progress
+end
+
 local function updateLockedSpeed(state, delta, now)
     if not state.target then
         if state.everLocked and state.options.targetLostDecelerationEnabled == true then
@@ -1606,25 +1875,13 @@ local function updateLockedSpeed(state, delta, now)
     end
     if state.options.dynamicAccelerationEnabled == true then
         local elapsed = math.max(0, now - (state.lockSpeedRampStartedMs or now))
-        local progress = math.max(0, math.min(
-            elapsed / math.max(state.options.accelerationTimeToMaxMs, 1), 1))
-        local noticeableProgress = math.max(0.05, math.min(
-            state.options.accelerationNoticeableByMs
-                / math.max(state.options.accelerationTimeToMaxMs, 1), 0.95))
-        local noticeableGain = 0.35
-        local curve = progress
-        if state.options.accelerationCurveMode == 1 then
-            if progress <= noticeableProgress then
-                local early = progress / noticeableProgress
-                curve = noticeableGain * (early * (2 - early))
-            else
-                local late = (progress - noticeableProgress) / (1 - noticeableProgress)
-                local smoothLate = late * late * (3 - 2 * late)
-                curve = noticeableGain + (1 - noticeableGain) * smoothLate
-            end
-        end
         local startSpeed = state.lockSpeedRampStartSpeed or state.speed
-        state.speed = startSpeed + (state.options.lockedMaxSpeed - startSpeed) * curve
+        local speed, progress = accelerationSpeedAtElapsed(startSpeed,
+            state.options.lockedMaxSpeed, elapsed,
+            state.options.accelerationTimeToMaxMs,
+            state.options.accelerationNoticeableByMs,
+            state.options.accelerationCurveMode)
+        state.speed = speed
         state.speedStage = progress >= 1 and "LOCKED_MAX_SPEED"
             or "LOCKED_TIME_TO_MAX_SMOOTH_ACCELERATION"
         return
@@ -1659,12 +1916,12 @@ local function acquireIfDue(state, now)
 end
 
 local function cancelNoTarget(state)
-    if state.options.refundNoTarget then refundCooldown(state) end
+    local refunded = state.options.refundNoTarget and refundCooldown(state) == true
     notifyIcon("CANCEL")
     print("[XNP GREEN VIRTUAL] cancelled=true reason=NO_TARGET_TIMEOUT"
         .. " cast_id=" .. tostring(state.id)
         .. " impact_sound=false damage=false cooldown_refunded="
-        .. tostring(state.options.refundNoTarget))
+        .. tostring(refunded))
     finallyCleanupCast(state, "NO_TARGET_TIMEOUT")
 end
 
@@ -1723,10 +1980,17 @@ local function updateFlight(state, now, fixedDelta)
     state.current_simulation_ms = now
     state.castSimulationSteps = (state.castSimulationSteps or 0) + 1
     if Core.GreenWorldLight then pcall(Core.GreenWorldLight.UpdateFlight, state, now) end
-    local visible, visualMethod = Core.GreenVisibleProxy.Update(state)
-    if visible ~= true then
-        abortVisualTransaction(state, "TRACK_VISUAL_UPDATE_FAILED:" .. tostring(visualMethod), true)
-        return
+    if state.visualReady == true then
+        local updateOk, visible, visualMethod = pcall(Core.GreenVisibleProxy.Update, state)
+        if updateOk ~= true or visible ~= true then
+            state.visualReady = false
+            state.visualDegraded = true
+            state.visualFailureReason = "TRACK_VISUAL_UPDATE_FAILED:"
+                .. tostring(updateOk and visualMethod or visible)
+            Orb.visualDegradedCastCount = Orb.visualDegradedCastCount + 1
+            logFailureOnce(state, state.visualFailureReason)
+            pcall(Core.GreenVisibleProxy.Cleanup, state)
+        end
     end
 end
 
@@ -1795,7 +2059,66 @@ local function updateProtected(player)
     return true
 end
 
-function Orb.CanActivate(player)
+local function logBurstWindowClosed(player, burst, currentMs)
+    if not burst or burst.windowClosedLogged == true then return end
+    if currentMs <= (burst.deadlineMs or -1) then return end
+    burst.windowClosedLogged = true
+    Orb.burstWindowClosedCount = Orb.burstWindowClosedCount + 1
+    print("[XNP GREEN BURST] burst_id=" .. tostring(burst.id)
+        .. " event=WINDOW_CLOSED"
+        .. " accepted_cast_count=" .. tostring(burst.acceptedCastCount or 0)
+        .. " active_casts=" .. tostring(tableCount(castBucket(burst.playerNum, false)))
+        .. " cooldown_remaining_ms="
+        .. tostring(math.max(0, (burst.cooldownDeadlineMs or 0) - currentMs)))
+end
+
+local function resolveBurstContinuation(player, currentMs, options)
+    local burst = Orb.burstByPlayer[player]
+    if not burst then return nil, false end
+    logBurstWindowClosed(player, burst, currentMs)
+    local identityMatches = burst.ownerPlayer == player
+        and burst.playerNum == playerNumber(player)
+    local inWindow = currentMs >= (burst.startedMs or math.huge)
+        and currentMs <= (burst.deadlineMs or -1)
+    local cooldownMatches = (Orb.cooldownByPlayer[player] or 0)
+        == (burst.cooldownDeadlineMs or -1)
+    local continuation = options.rapidCastRandomDirectionEnabled == true
+        and identityMatches and inWindow and cooldownMatches
+    return burst, continuation
+end
+
+local function beginBurst(player, state, now, options, cooldownBypassed)
+    Orb.burstSerial = Orb.burstSerial + 1
+    local cooldownDeadline = (options.cooldownEnabled ~= true or cooldownBypassed)
+        and 0 or (now + options.cooldownMs)
+    local burst = {
+        id = Orb.burstSerial,
+        ownerPlayer = player,
+        ownerIdentity = tostring(player),
+        playerNum = state.playerNum,
+        startedMs = now,
+        deadlineMs = now + options.rapidCastWindowMs,
+        cooldownDeadlineMs = cooldownDeadline,
+        firstCastId = state.id,
+        acceptedCastCount = 1,
+        rngRoute = "ENGINE_RNG_WITH_DETERMINISTIC_FINITE_FALLBACK",
+        windowClosedLogged = false,
+        cooldownRefunded = false,
+    }
+    Orb.burstByPlayer[player] = burst
+    Orb.cooldownByPlayer[player] = cooldownDeadline
+    Orb.burstStartCount = Orb.burstStartCount + 1
+    state.burstId = burst.id
+    state.burstCooldownDeadlineMs = cooldownDeadline
+    state.cooldownOwner = true
+    print("[XNP GREEN BURST] burst_id=" .. tostring(burst.id)
+        .. " event=START first_cast_id=" .. tostring(state.id)
+        .. " window_ms=" .. tostring(options.rapidCastWindowMs)
+        .. " cooldown_deadline_ms=" .. tostring(cooldownDeadline))
+    return burst
+end
+
+function Orb.CanActivate(player, inputTimestampMs, suppliedOptions)
     if not player then return false, "PLAYER_INVALID" end
     local identityValid, identityReason = Core.CanonicalPlayerIdentity.Validate(player, true)
     if not identityValid then return false, "IDENTITY_REJECTED:" .. tostring(identityReason) end
@@ -1814,46 +2137,58 @@ function Orb.CanActivate(player)
     if not Core.ExtraTraits or Core.ExtraTraits.PlayerHas(player, "GREEN") ~= true then
         return false, "TRAIT_MISSING"
     end
-    local options = settings()
+    local options = suppliedOptions or settings()
+    local currentMs = normalizeInputTimestamp(inputTimestampMs)
     local playerNum = playerNumber(player)
-    if tableCount(castBucket(playerNum, false)) >= options.maximumConcurrentCastsPerPlayer then
+    local activeForPlayer = tableCount(castBucket(playerNum, false))
+    if activeForPlayer >= options.maximumConcurrentCastsPerPlayer then
         return false, "MAX_CONCURRENT_CASTS"
     end
     if Orb.activeCountGlobal >= options.maximumConcurrentCastsGlobal then
-        return false, "MAX_CONCURRENT_CASTS"
+        return false, "MAX_GLOBAL_CONCURRENT_CASTS"
     end
+    if options.continuousRollingCastEnabled == true then
+        Orb.rollingCooldownBypassCount = Orb.rollingCooldownBypassCount + 1
+        print("[XNP GREEN ROLLING] admission=READY"
+            .. " active_casts_player=" .. tostring(activeForPlayer)
+            .. " retained_count=" .. tostring(options.rollingCastRetainedCount)
+            .. " cooldown_gate_bypassed=CONTINUOUS_ROLLING_MODE")
+        return true, "READY", options, nil, activeForPlayer > 0, true, activeForPlayer
+    end
+    local burst, continuation = resolveBurstContinuation(player, currentMs, options)
     local cooldownBypassed = options.runtimeTestMode == true and options.testNoCooldown == true
-    if options.cooldownEnabled == true and not cooldownBypassed
-        and nowMs() < (Orb.cooldownByPlayer[player] or 0) then
+    if options.cooldownEnabled == true and not cooldownBypassed and not continuation
+        and currentMs < (Orb.cooldownByPlayer[player] or 0) then
         return false, "COOLDOWN_ACTIVE"
     end
-    return true, "READY", options
+    return true, "READY", options, burst, continuation, false, activeForPlayer
 end
 
 local function requestActivateTransaction(transaction)
     local player = transaction.player
     local source = transaction.source
-    local allowed, reason, options = Orb.CanActivate(player)
-    if not allowed then
-        print("[XNP GREEN CAST BLOCKED] reason=" .. tostring(reason)
-            .. " existing_casts_preserved=true cost=false cooldown=false sound=false")
-        return false, reason
-    end
+    local allowed, reason, options, burst, continuation, rolling, activeBefore = Orb.CanActivate(
+        player, transaction.inputTimestampMs)
+    if not allowed then return false, reason end
     local x = coordinate(player, "getX")
     local y = coordinate(player, "getY")
     local z = coordinate(player, "getZ")
     if not x or not y or not z then return false, "PLAYER_COORDINATE_UNAVAILABLE" end
     local now = transaction.inputTimestampMs
     local fx, fy, directionSource = playerForward(player)
-    local lastSuccessful = Orb.lastSuccessfulCastMsByPlayer[player]
-    local elapsedSinceSuccess = lastSuccessful and (now - lastSuccessful) or nil
-    local rapid = options.rapidCastRandomDirectionEnabled == true and lastSuccessful ~= nil
-        and elapsedSinceSuccess >= 0 and elapsedSinceSuccess < options.rapidCastWindowMs
+    local rapid = continuation == true
     local randomMethod = "NOT_RAPID"
+    local randomAngleDeg = nil
     if rapid and options.rapidCastRandomDirectionMode == 1 then
-        fx, fy, randomMethod = rapidCastHeading(fx, fy, Orb.serial + 1)
-        directionSource = randomMethod == "PLAYER_FORWARD_FALLBACK"
-            and "RAPID_CAST_FALLBACK_HEADING" or "RAPID_CAST_RANDOM_DIRECTION"
+        fx, fy, randomMethod, randomAngleDeg = rapidCastHeading(
+            fx, fy, Orb.serial + 1)
+        if rolling then
+            directionSource = randomMethod == "PLAYER_FORWARD_FALLBACK"
+                and "ROLLING_CAST_FALLBACK_HEADING" or "ROLLING_CAST_RANDOM_DIRECTION"
+        else
+            directionSource = randomMethod == "PLAYER_FORWARD_FALLBACK"
+                and "RAPID_CAST_FALLBACK_HEADING" or "RAPID_CAST_RANDOM_DIRECTION"
+        end
     end
     Orb.serial = Orb.serial + 1
     local exactSpawn = (rapid and options.rapidCastSpawnAtExactPlayerPosition == true)
@@ -1891,9 +2226,17 @@ local function requestActivateTransaction(transaction)
         mapHidden = Orb.mapHidden,
         cooldownBefore = Orb.cooldownByPlayer[player] or 0,
         source = source,
+        inputRequestId = transaction.requestId,
+        inputSnapshot = transaction.inputSnapshot,
         rapidCast = rapid,
+        rollingCast = rolling == true,
+        directionSource = directionSource,
         inputTimestampMs = now,
         randomDirectionMethod = randomMethod,
+        randomAngleDeg = randomAngleDeg,
+        burstId = burst and burst.id or nil,
+        burstCooldownDeadlineMs = burst and burst.cooldownDeadlineMs or nil,
+        cooldownOwner = false,
         travelDistance = 0,
         impactContactTarget = nil,
         spawnTileX = math.floor(x),
@@ -1926,12 +2269,19 @@ local function requestActivateTransaction(transaction)
         Core.GreenSmoothVisual.SetRuntimeOptions(options)
     end
     local createOk, visualReady, visualReason = pcall(Core.GreenVisibleProxy.Create, state)
-    if createOk ~= true then
+    state.visualReady = createOk == true and visualReady == true
+    state.visualDegraded = state.visualReady ~= true
+    state.visualFailureReason = state.visualReady and "NONE"
+        or (createOk and "VISIBLE_PROXY_CREATE_FAILED:" .. tostring(visualReason)
+            or "VISIBLE_PROXY_CREATE_EXCEPTION:" .. tostring(visualReady))
+    transaction.visualCreated = state.visualReady
+    if state.visualReady ~= true then
+        Orb.visualDegradedCastCount = Orb.visualDegradedCastCount + 1
         pcall(Core.GreenVisibleProxy.Cleanup, state)
-        return false, "VISIBLE_PROXY_CREATE_EXCEPTION:" .. tostring(visualReady)
+        print("[XNP GREEN VISUAL DEGRADED] cast_id=" .. tostring(state.id)
+            .. " reason=" .. tostring(state.visualFailureReason)
+            .. " gameplay_transaction_preserved=true")
     end
-    if visualReady ~= true then return false, "VISIBLE_PROXY_CREATE_FAILED:" .. tostring(visualReason) end
-    transaction.visualCreated = true
     local registered, registerReason = registerCast(state)
     if registered ~= true then
         pcall(Core.GreenVisibleProxy.Cleanup, state)
@@ -1944,15 +2294,61 @@ local function requestActivateTransaction(transaction)
         return false, chargeReason
     end
     transaction.costsCharged = true
+    local fatigueResult = state.costResults and state.costResults.fatigue or {}
+    if tonumber(fatigueResult.before) and tonumber(fatigueResult.before) >= 0.999 then
+        Orb.acceptedAtMaximumFatigueCount = Orb.acceptedAtMaximumFatigueCount + 1
+    end
+    local enduranceResult = state.costResults and state.costResults.endurance or {}
+    if tonumber(enduranceResult.before) and tonumber(enduranceResult.before) <= 0.001 then
+        Orb.acceptedAtZeroEnduranceCount = Orb.acceptedAtZeroEnduranceCount + 1
+    end
     local cooldownBypassed = options.runtimeTestMode == true and options.testNoCooldown == true
-    Orb.cooldownByPlayer[player] = (options.cooldownEnabled ~= true or cooldownBypassed)
-        and 0 or (now + options.cooldownMs)
+    if rolling then
+        local retain = options.rollingCastRetainedCount
+        if activeBefore >= retain and options.rollingCastEvictOldestEnabled == true then
+            local victim = oldestRollingVictim(state.playerNum, state)
+            if not victim then
+                finallyCleanupCast(state, "ROLLING_FIFO_VICTIM_UNAVAILABLE")
+                return false, "ROLLING_FIFO_VICTIM_UNAVAILABLE"
+            end
+            local removed = finallyCleanupCast(victim, "ROLLING_CAP_FIFO_EVICT")
+            if removed ~= true then
+                finallyCleanupCast(state, "ROLLING_FIFO_EVICT_FAILED")
+                return false, "ROLLING_FIFO_EVICT_FAILED"
+            end
+            Orb.rollingFifoEvictCount = Orb.rollingFifoEvictCount + 1
+            print("[XNP GREEN ROLLING] event=FIFO_EVICT"
+                .. " victim_cast_id=" .. tostring(victim.id)
+                .. " new_cast_id=" .. tostring(state.id)
+                .. " reason=ROLLING_CAP_FIFO_EVICT impact=false damage=false fire=false")
+        end
+    elseif rapid then
+        burst.acceptedCastCount = (burst.acceptedCastCount or 1) + 1
+        state.burstId = burst.id
+        state.burstCooldownDeadlineMs = burst.cooldownDeadlineMs
+        Orb.burstContinuationCount = Orb.burstContinuationCount + 1
+        if directionSource == "RAPID_CAST_RANDOM_DIRECTION" then
+            Orb.burstRandomDirectionCount = Orb.burstRandomDirectionCount + 1
+        end
+        print("[XNP GREEN BURST] burst_id=" .. tostring(burst.id)
+            .. " event=CONTINUATION_ACCEPTED cast_id=" .. tostring(state.id)
+            .. " burst_elapsed_ms=" .. tostring(now - burst.startedMs)
+            .. " random_angle_deg=" .. tostring(randomAngleDeg)
+            .. " cooldown_bypass=SAME_BURST_CONTINUATION"
+            .. " cooldown_deadline_unchanged=true")
+    else
+        transaction.burstBefore = Orb.burstByPlayer[player]
+        burst = beginBurst(player, state, now, options, cooldownBypassed)
+        transaction.burstStarted = true
+    end
     local soundOk, soundMethod = playConfigured(state, "GREEN_PROJECTILE_CAST", "green-cast",
         options.castSound, 100)
     pcall(notifyIcon, "CAST")
     Orb.lastSuccessfulCastMsByPlayer[player] = now
+    Orb.acceptedRequestCount = Orb.acceptedRequestCount + 1
     if Core.GreenWorldLight then pcall(Core.GreenWorldLight.CreateFlight, state, now) end
     print("[XNP GREEN CAST ACCEPTED] cast_id=" .. tostring(state.id)
+        .. " request_id=" .. tostring(transaction.requestId)
         .. " source=" .. tostring(source)
         .. " phase=CRUISE_SEARCHING initial_target=false"
         .. " direction_source=" .. tostring(directionSource)
@@ -1963,11 +2359,18 @@ local function requestActivateTransaction(transaction)
         .. " rapid_cast=" .. tostring(rapid)
         .. " input_timestamp_ms=" .. tostring(now)
         .. " random_method=" .. tostring(randomMethod)
+        .. " random_angle_deg=" .. tostring(randomAngleDeg)
+        .. " burst_id=" .. tostring(state.burstId)
+        .. " cooldown_owner=" .. tostring(state.cooldownOwner == true)
+        .. " cooldown_bypass_reason="
+        .. tostring(rapid and "SAME_BURST_CONTINUATION" or "NONE")
         .. " cruise_speed=" .. tostring(options.preLockCruiseSpeed)
         .. " active_casts_player=" .. tostring(tableCount(castBucket(state.playerNum, false)))
         .. " active_casts_global=" .. tostring(Orb.activeCountGlobal)
         .. " maximum_per_player=" .. tostring(options.maximumConcurrentCastsPerPlayer)
         .. " maximum_global=" .. tostring(options.maximumConcurrentCastsGlobal)
+        .. " visual_ready=" .. tostring(state.visualReady == true)
+        .. " visual_failure_blocks_gameplay=false"
         .. " lifetime_source=GreenMaximumFlightSeconds"
         .. " lifetime_seconds=" .. tostring(options.maximumFlightMs / 1000)
         .. " expire_ms=" .. tostring(state.expiresAtMs)
@@ -1976,20 +2379,37 @@ local function requestActivateTransaction(transaction)
     return true, "CAST_ACCEPTED", state.id
 end
 
-function Orb.RequestActivate(player, source, inputTimestampMs)
-    local identityValid, identityReason = Core.CanonicalPlayerIdentity.Validate(player, true)
-    if not identityValid then return false, "IDENTITY_REJECTED:" .. tostring(identityReason) end
+function Orb.RequestActivate(player, source, inputTimestampMs, requestId, inputSnapshot, ticket)
+    Orb.inputRequestSerial = Orb.inputRequestSerial + 1
     local transaction = {
         player = player,
         source = source or "GREEN_UI",
         inputTimestampMs = normalizeInputTimestamp(inputTimestampMs),
+        requestId = requestId or Orb.inputRequestSerial,
+        inputSnapshot = inputSnapshot,
         state = nil,
         visualCreated = false,
         registered = false,
         costsCharged = false,
+        burstBefore = nil,
+        burstStarted = false,
     }
+    local proofOk, proofReason = Core.GreenDoubleClickGate.Consume(player, source, ticket)
+    if not proofOk then
+        logRejected(transaction, proofReason, "DOUBLE_CLICK_PROOF")
+        return false, proofReason
+    end
+    local identityValid, identityReason = Core.CanonicalPlayerIdentity.Validate(player, true)
+    if not identityValid then
+        local reason = "IDENTITY_REJECTED:" .. tostring(identityReason)
+        logRejected(transaction, reason, "IDENTITY")
+        return false, reason
+    end
     local ok, accepted, reason, castId = pcall(requestActivateTransaction, transaction)
-    if ok then return accepted, reason, castId end
+    if ok then
+        if accepted ~= true then logRejected(transaction, reason, "ADMISSION") end
+        return accepted, reason, castId
+    end
     local state = transaction.state
     if state and transaction.costsCharged == true then
         restoreCommittedCosts(state)
@@ -1997,6 +2417,12 @@ function Orb.RequestActivate(player, source, inputTimestampMs)
     end
     if state and state.player then
         Orb.cooldownByPlayer[state.player] = state.cooldownBefore or 0
+        if transaction.burstStarted == true then
+            local currentBurst = Orb.burstByPlayer[state.player]
+            if currentBurst and currentBurst.id == state.burstId then
+                Orb.burstByPlayer[state.player] = transaction.burstBefore
+            end
+        end
     end
     if state and transaction.registered == true then
         finallyCleanupCast(state, "ACTIVATION_EXCEPTION")
@@ -2007,7 +2433,22 @@ function Orb.RequestActivate(player, source, inputTimestampMs)
         .. " detail=" .. tostring(accepted)
         .. " existing_casts_preserved=true cost=false cooldown=false sound=false"
         .. " activation_lock=false")
+    logRejected(transaction, "INTERNAL_EXCEPTION", "EXCEPTION")
     return false, "INTERNAL_EXCEPTION"
+end
+
+function Orb.GetPlayerStatus(player)
+    local ready, reason = Orb.CanActivate(player, nowMs())
+    local cooldownRemaining = math.max(0,
+        ((Orb.cooldownByPlayer[player] or 0) - nowMs()) / 1000)
+    return {
+        ready = ready == true,
+        reason = reason,
+        cooldown_remaining_seconds = cooldownRemaining,
+        active_casts_player = player and tableCount(
+            Orb.activeCastsByPlayer[playerNumber(player)]) or 0,
+        active_casts_global = Orb.activeCountGlobal,
+    }
 end
 
 function Orb.Update(player)
@@ -2017,9 +2458,17 @@ end
 
 function Orb.InitializePlayer(player, source)
     if not player or Core.CanonicalPlayerIdentity.Validate(player, true) ~= true then return false end
-    local preflight = Core.GreenVisibleProxy.Preflight()
     local options = settings()
-    print("[XNP GREEN CONFIG] loaded=true version=0.5.60.7.15"
+    if Core.GreenSmoothVisual and Core.GreenSmoothVisual.SetRuntimeOptions then
+        Core.GreenSmoothVisual.SetRuntimeOptions(options)
+    end
+    if Core.GreenVisibleProxy and Core.GreenVisibleProxy.ResetPreflight then
+        Core.GreenVisibleProxy.ResetPreflight()
+    end
+    local preflight = Core.GreenVisibleProxy.Preflight()
+    local currentVersion = Core.Constants and Core.Constants.VERSION
+        or "2.2.0-test.8"
+    print("[XNP GREEN CONFIG] loaded=true version=" .. tostring(currentVersion)
         .. " mode=" .. Orb.FINAL_GREEN_MODE
         .. " multiplayer_scope=" .. Orb.GREEN_MULTIPLAYER_SCOPE
         .. " initial_target=false cruise_searching=true"
@@ -2034,6 +2483,9 @@ function Orb.InitializePlayer(player, source)
             and "TIME_TO_MAX_DYNAMIC_CURVE" or "FIXED_SPEED_BLEND")
         .. " expected_time_to_max_seconds="
         .. tostring(options.accelerationTimeToMaxMs / 1000)
+        .. " rapid_burst_window_ms=" .. tostring(options.rapidCastWindowMs)
+        .. " rapid_burst_shared_cooldown=true"
+        .. " visual_style=" .. tostring(options.visualStyle)
         .. " any_valid_collision=" .. tostring(options.anyValidCollisionDetonationEnabled)
         .. " collision_characters=" .. tostring(options.collisionCharactersEnabled)
         .. " collision_world_solids=" .. tostring(options.collisionWorldSolidsEnabled)
@@ -2048,7 +2500,12 @@ function Orb.InitializePlayer(player, source)
         .. " flight_light_follow_enabled=" .. tostring(options.dynamicLightFollowEnabled)
         .. " preflight_ready=" .. tostring(preflight.ready)
         .. " source=" .. tostring(source))
-    return preflight.ready == true
+    if preflight.ready ~= true then
+        print("[XNP GREEN VISUAL DEGRADED] cast_id=INITIALIZE"
+            .. " reason=" .. tostring(preflight.reason or "PREFLIGHT_NOT_READY")
+            .. " gameplay_transaction_preserved=true")
+    end
+    return true
 end
 
 function Orb.SetMapHidden(hidden)
@@ -2079,6 +2536,19 @@ function Orb.GetDiagnostics()
         pendingImpactLimit = Orb.maximumPendingImpacts,
         activeRenderProxyCount = visualMetrics.activeCount or 0,
         activeImpactProxyCount = visualMetrics.impactCount or 0,
+        activeRenderFrames = visualMetrics.activeRenderFrames or 0,
+        centerSubmitFrames = visualMetrics.centerSubmitFrames or 0,
+        centerDrawSuccessFrames = visualMetrics.centerDrawSuccessFrames or 0,
+        glowSubmitFrames = visualMetrics.glowSubmitFrames or 0,
+        projectionFailFrames = visualMetrics.projectionFailFrames or 0,
+        heldProjectionFrames = visualMetrics.heldProjectionFrames or 0,
+        centerMissingFrames = visualMetrics.centerMissingFrames or 0,
+        maximumConsecutiveCenterMissingFrames =
+            visualMetrics.maximumConsecutiveCenterMissingFrames or 0,
+        renderIntervalP50Ms = visualMetrics.renderIntervalP50Ms or 0,
+        renderIntervalP95Ms = visualMetrics.renderIntervalP95Ms or 0,
+        renderIntervalMaxMs = visualMetrics.renderIntervalMaxMs or 0,
+        renderAllocationEstimate = visualMetrics.renderAllocationEstimate or 0,
         activeFlightLightCount = lightMetrics.activeFlightCount or 0,
         activeDynamicLightCount = lightMetrics.activeCount or 0,
         peakDynamicLightCount = lightMetrics.peakActiveCount or 0,
@@ -2091,13 +2561,167 @@ function Orb.GetDiagnostics()
         perCastSimulationEventCount = Orb.perCastSimulationEventCount,
         maximumCatchupStepsObserved = Orb.maximumCatchupStepsObserved,
         droppedCatchupMs = Orb.droppedCatchupMs,
+        inputRequestCount = Orb.inputRequestSerial,
+        acceptedRequestCount = Orb.acceptedRequestCount,
+        rejectedRequestCount = Orb.rejectedRequestCount,
+        acceptedAtMaximumFatigueCount = Orb.acceptedAtMaximumFatigueCount,
+        acceptedAtZeroEnduranceCount = Orb.acceptedAtZeroEnduranceCount,
+        costTransactionCount = Orb.costTransactionCount,
+        silentRejectCount = Orb.silentRejectCount,
+        visualDegradedCastCount = Orb.visualDegradedCastCount,
+        activeSlotLeakCount = Orb.activeSlotLeakCount,
+        burstStartCount = Orb.burstStartCount,
+        burstContinuationCount = Orb.burstContinuationCount,
+        burstRandomDirectionCount = Orb.burstRandomDirectionCount,
+        burstWindowClosedCount = Orb.burstWindowClosedCount,
+        cooldownExtensionCount = Orb.cooldownExtensionCount,
+        cooldownResetByContinuationCount = Orb.cooldownResetByContinuationCount,
+        rollingFifoEvictCount = Orb.rollingFifoEvictCount,
+        rollingCooldownBypassCount = Orb.rollingCooldownBypassCount,
     }
+end
+
+function Orb.TestResourceAdmissionForHarness(player, overrides)
+    if _G.XNP_TEST_HARNESS_ACTIVE ~= true then
+        return false, "HARNESS_GATE_CLOSED"
+    end
+    overrides = type(overrides) == "table" and overrides or {}
+    local options = {
+        runtimeTestMode = overrides.runtimeTestMode == true,
+        testStillApplyCosts = overrides.testStillApplyCosts ~= false,
+        testIgnoreResourceAdmission = overrides.testIgnoreResourceAdmission == true,
+        testAllowZeroEndurance = overrides.testAllowZeroEndurance == true,
+        testAllowMaxFatigue = overrides.testAllowMaxFatigue == true,
+        productionContinuousRolling = overrides.productionContinuousRolling == true,
+        fatigueCostEnabled = overrides.fatigueCostEnabled ~= false,
+        fatigueCostPercent = tonumber(overrides.fatigueCostPercent) or 30,
+        enduranceCostEnabled = overrides.enduranceCostEnabled ~= false,
+        enduranceCostPercent = tonumber(overrides.enduranceCostPercent) or 5,
+    }
+    local state = { id = "HARNESS", player = player, options = options }
+    local ready, reason = preflightCosts(state)
+    if ready ~= true then return false, reason, state.costResults end
+    local charged, chargeReason = chargeCostsOnce(state)
+    return charged == true, chargeReason, state.costResults
+end
+
+function Orb.TestSlotLifecycleForHarness(playerNum, castId)
+    if _G.XNP_TEST_HARNESS_ACTIVE ~= true then
+        return false, "HARNESS_GATE_CLOSED"
+    end
+    local state = { playerNum = tonumber(playerNum) or 0, id = castId or "HARNESS_SLOT" }
+    local registered, registerReason = registerCast(state)
+    if registered ~= true then return false, registerReason end
+    local removed, removeReason = unregisterCast(state)
+    local bucket = Orb.activeCastsByPlayer[state.playerNum]
+    local released = removed == true and Orb.activeCastsById[state.id] == nil
+        and (not bucket or bucket[state.id] == nil)
+    if not released then Orb.activeSlotLeakCount = Orb.activeSlotLeakCount + 1 end
+    return released, removeReason
+end
+
+function Orb.TestGetCastForHarness(castId)
+    if _G.XNP_TEST_HARNESS_ACTIVE ~= true then
+        return nil, "HARNESS_GATE_CLOSED"
+    end
+    return Orb.activeCastsById[castId], "OK"
+end
+
+function Orb.TestGetBurstForHarness(player)
+    if _G.XNP_TEST_HARNESS_ACTIVE ~= true then
+        return nil, "HARNESS_GATE_CLOSED"
+    end
+    local burst = Orb.burstByPlayer[player]
+    if not burst then return nil, "BURST_MISSING" end
+    return {
+        id = burst.id,
+        playerNum = burst.playerNum,
+        startedMs = burst.startedMs,
+        deadlineMs = burst.deadlineMs,
+        cooldownDeadlineMs = burst.cooldownDeadlineMs,
+        firstCastId = burst.firstCastId,
+        acceptedCastCount = burst.acceptedCastCount,
+        windowClosedLogged = burst.windowClosedLogged == true,
+        cooldownRefunded = burst.cooldownRefunded == true,
+    }, "OK"
+end
+
+function Orb.TestGetCooldownForHarness(player)
+    if _G.XNP_TEST_HARNESS_ACTIVE ~= true then
+        return nil, "HARNESS_GATE_CLOSED"
+    end
+    return Orb.cooldownByPlayer[player] or 0, "OK"
+end
+
+function Orb.TestRandomAnglesForHarness(count, seed)
+    if _G.XNP_TEST_HARNESS_ACTIVE ~= true then
+        return nil, "HARNESS_GATE_CLOSED"
+    end
+    local total = math.max(1, math.min(math.floor(tonumber(count) or 1), 10000))
+    local value = math.floor(math.abs(tonumber(seed) or 1)) % 2147483647
+    if value == 0 then value = 1 end
+    local result = {
+        count = total,
+        seed = value,
+        angles = {},
+        quadrants = { 0, 0, 0, 0 },
+        finite = true,
+        minimum = 360,
+        maximum = 0,
+        checksum = 0,
+    }
+    for index = 1, total do
+        value = (value * 48271) % 2147483647
+        local unit = (value - 1) / 2147483646
+        local _, _, method, angle = headingFromRandomUnit(unit, 1, 0,
+            "HARNESS_DETERMINISTIC_LCG")
+        if method == "PLAYER_FORWARD_FALLBACK" or angle == nil
+            or angle ~= angle or angle < 0 or angle >= 360 then
+            result.finite = false
+            angle = 0
+        end
+        result.angles[index] = angle
+        local quadrant = math.min(4, math.floor(angle / 90) + 1)
+        result.quadrants[quadrant] = result.quadrants[quadrant] + 1
+        result.minimum = math.min(result.minimum, angle)
+        result.maximum = math.max(result.maximum, angle)
+        result.checksum = (result.checksum + math.floor(angle * 1000 + 0.5) * index)
+            % 2147483647
+    end
+    return result, "OK"
+end
+
+function Orb.TestMotionForHarness(elapsedMs, fps, overrides)
+    if _G.XNP_TEST_HARNESS_ACTIVE ~= true then
+        return nil, "HARNESS_GATE_CLOSED"
+    end
+    overrides = type(overrides) == "table" and overrides or {}
+    local startSpeed = tonumber(overrides.startSpeed) or 2
+    local maximumSpeed = tonumber(overrides.maximumSpeed) or 8
+    local timeToMaxMs = tonumber(overrides.timeToMaxMs) or 4500
+    local noticeableByMs = tonumber(overrides.noticeableByMs) or 1000
+    local curveMode = tonumber(overrides.curveMode) or 1
+    local turnRate = tonumber(overrides.turnRateDegPerSecond) or 150
+    local frameRate = math.max(1, tonumber(fps) or 30)
+    local speed, progress = accelerationSpeedAtElapsed(startSpeed, maximumSpeed,
+        math.max(0, tonumber(elapsedMs) or 0), timeToMaxMs, noticeableByMs, curveMode)
+    return {
+        elapsedMs = math.max(0, tonumber(elapsedMs) or 0),
+        fps = frameRate,
+        speed = math.min(maximumSpeed, speed),
+        progress = progress,
+        maximumTurnDegPerFrame = turnRate / frameRate,
+        turnRateDegPerSecond = turnRate,
+        timeToMaxMs = timeToMaxMs,
+    }, "OK"
 end
 
 function Orb.Cleanup(player, reason)
     if not player then return 0 end
     local snapshot = castSnapshot(playerNumber(player))
     for _, state in ipairs(snapshot) do finallyCleanupCast(state, reason or "PLAYER_CLEANUP") end
+    Orb.burstByPlayer[player] = nil
+    Orb.cooldownByPlayer[player] = nil
     return #snapshot
 end
 
@@ -2131,6 +2755,20 @@ function Orb.Shutdown(reason)
         .. " simulation_steps=" .. tostring(Orb.simulationStepCount)
         .. " maximum_catchup_steps_observed=" .. tostring(Orb.maximumCatchupStepsObserved)
         .. " dropped_catchup_ms=" .. tostring(Orb.droppedCatchupMs)
+        .. " accepted_requests=" .. tostring(Orb.acceptedRequestCount)
+        .. " rejected_requests=" .. tostring(Orb.rejectedRequestCount)
+        .. " accepted_at_maximum_fatigue="
+        .. tostring(Orb.acceptedAtMaximumFatigueCount)
+        .. " silent_reject_count=" .. tostring(Orb.silentRejectCount)
+        .. " visual_degraded_casts=" .. tostring(Orb.visualDegradedCastCount)
+        .. " active_slot_leak_count=" .. tostring(Orb.activeSlotLeakCount)
+        .. " burst_starts=" .. tostring(Orb.burstStartCount)
+        .. " burst_continuations=" .. tostring(Orb.burstContinuationCount)
+        .. " burst_random_directions=" .. tostring(Orb.burstRandomDirectionCount)
+        .. " burst_windows_closed=" .. tostring(Orb.burstWindowClosedCount)
+        .. " cooldown_extensions=" .. tostring(Orb.cooldownExtensionCount)
+        .. " cooldown_resets_by_continuation="
+        .. tostring(Orb.cooldownResetByContinuationCount)
         .. " area_outline_scans=0 per_frame_sandbox_reads=0 per_frame_texture_loads=0")
     Orb.activeCastsByPlayer = {}
     Orb.activeCastsById = {}
@@ -2138,6 +2776,8 @@ function Orb.Shutdown(reason)
     Orb.peakActiveCountGlobal = 0
     Orb.reservedTargetByPlayer = {}
     Orb.cooldownByPlayer = setmetatable({}, { __mode = "k" })
+    Orb.burstByPlayer = setmetatable({}, { __mode = "k" })
+    Orb.burstSerial = 0
     Orb.outlineOwners = setmetatable({}, { __mode = "k" })
     Orb.failureLogged = {}
     Orb.queryCache = {}
@@ -2167,6 +2807,19 @@ function Orb.Shutdown(reason)
     Orb.simulationStepCount = 0
     Orb.maximumCatchupStepsObserved = 0
     Orb.droppedCatchupMs = 0
+    Orb.inputRequestSerial = 0
+    Orb.acceptedRequestCount = 0
+    Orb.rejectedRequestCount = 0
+    Orb.acceptedAtMaximumFatigueCount = 0
+    Orb.silentRejectCount = 0
+    Orb.visualDegradedCastCount = 0
+    Orb.activeSlotLeakCount = 0
+    Orb.burstStartCount = 0
+    Orb.burstContinuationCount = 0
+    Orb.burstRandomDirectionCount = 0
+    Orb.burstWindowClosedCount = 0
+    Orb.cooldownExtensionCount = 0
+    Orb.cooldownResetByContinuationCount = 0
     return #snapshot
 end
 
