@@ -1,0 +1,17 @@
+2.2.0-test.8
+
+CN:
+- 恢复绿色一秒随机多弹幕：首发向前，1000 毫秒内后续弹幕向人物周围随机发射。
+- 整组 Burst 只启动一次五秒冷却，后续弹幕不会重置或延长冷却。
+- 每枚弹体独立结算成本、音效、动态光、活动槽与清理；满疲劳仍可正常施放。
+- 默认 Style 6 只绘制绿色核心，移除飞行外圈、旋转层、泛光、尾迹、准星和目标轮廓。
+- 转向调整为每秒 150 度，4.5 秒加速到原有速度上限 8。
+- 其他绿色机制及黄、紫、红保持冻结；仍需用户实机验证。
+
+EN:
+- Restored the one-second Green random burst: first cast forward, continuation casts around the player.
+- One five-second cooldown belongs to the whole burst and is never reset or extended by continuations.
+- Every projectile owns an independent cost, sound, dynamic light, active slot, and cleanup transaction; maximum fatigue remains castable.
+- Default Style 6 draws only the green core and removes the flight ring, rotation, glow, trail, reticle, and target outline.
+- Guidance is 150 degrees per second and reaches the existing speed cap of 8 in 4.5 seconds.
+- Other Green mechanics plus Yellow, Purple, and Red remain frozen; user runtime validation is still required.
