@@ -12,7 +12,17 @@ local Audio = {
     consumedTokens = {},
     consumedOrder = {},
     maxTokens = 64,
+    recentSoundMs = {},
+    dedupeWindowMs = 100,
 }
+
+local function nowMs()
+    if type(getTimestampMs) == "function" then
+        local ok, value = pcall(getTimestampMs)
+        if ok and tonumber(value) then return tonumber(value) end
+    end
+    return os.time() * 1000
+end
 
 local function remember(token)
     if Audio.consumedTokens[token] then return false end
@@ -21,6 +31,7 @@ local function remember(token)
     if #Audio.consumedOrder > Audio.maxTokens then
         local oldest = table.remove(Audio.consumedOrder, 1)
         Audio.consumedTokens[oldest] = nil
+        Audio.recentSoundMs[oldest] = nil
     end
     return true
 end
@@ -30,7 +41,13 @@ local function playOnceInternal(player, soundKey, eventToken, volumePercent)
     if not player or not soundName or type(player.playSound) ~= "function" then
         return false, "SOUND_API_UNAVAILABLE"
     end
-    local token = tostring(soundKey) .. ":" .. tostring(eventToken or "MISSING_EVENT_TOKEN")
+    local token = tostring(soundKey) .. ":"
+        .. tostring(eventToken or "MISSING_EVENT_TOKEN")
+    local currentMs = nowMs()
+    local previousMs = tonumber(Audio.recentSoundMs[token]) or -1000000
+    if currentMs - previousMs < Audio.dedupeWindowMs then
+        return false, "SOUND_DEDUPED_100MS"
+    end
     if not remember(token) then return false, "EVENT_ALREADY_PLAYED" end
     local ok, handle = pcall(function() return player:playSound(soundName) end)
     if not ok then
@@ -38,6 +55,7 @@ local function playOnceInternal(player, soundKey, eventToken, volumePercent)
         print("[XNP AUDIO] play_failed sound=" .. soundName .. " error=" .. tostring(handle))
         return false, "PLAY_FAILED"
     end
+    Audio.recentSoundMs[token] = currentMs
     local volume = math.max(0, math.min(tonumber(volumePercent) or 100, 100)) / 100
     if volume < 1 and handle ~= nil then
         local emitterOk, emitter = pcall(function() return player:getEmitter() end)
@@ -72,6 +90,7 @@ function Audio.ReleasePrefix(prefix)
         local token = Audio.consumedOrder[index]
         if string.sub(token, 1, #prefix) == prefix then
             Audio.consumedTokens[token] = nil
+            Audio.recentSoundMs[token] = nil
             table.remove(Audio.consumedOrder, index)
             released = released + 1
         end
