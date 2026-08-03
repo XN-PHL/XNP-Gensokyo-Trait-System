@@ -3,12 +3,19 @@ XNP_PZ_DistanceRunner = XNP_PZ_DistanceRunner or {}
 local Core = XNP_PZ_DistanceRunner
 
 local Constants = {
-    MOD_NAME = "XNP 多模式特质联动｜幻想乡玩法系统 V2 测试版",
-    MOD_ID = "XNP_PZ_DistanceRunnerTrait",
-    VERSION = "2.1.0-test.1",
-    INTERNAL_VERSION = "2.1.0-test.1-pz-improvements-a",
-    BUILD_ID = "XNP_V2_210_TEST1_IMPROVEMENTS_A",
-    RELEASE_CHANNEL = "TEST_WORKSHOP",
+    MOD_NAME = "XNP 多模式特质联动｜幻想乡玩法系统 V2 B42.20 测试版",
+    MOD_ID = "XNP_PZ_DistanceRunnerTrait_Test",
+    STABLE_MOD_ID = "XNP_PZ_DistanceRunnerTrait",
+    TEST_MOD_ID = "XNP_PZ_DistanceRunnerTrait_Test",
+    TEST_WORKSHOP_ID = "3762431102",
+    STABLE_WORKSHOP_ID = "3773295868",
+    VERSION = "2.3.0-test.1",
+    INTERNAL_VERSION = "2.3.0-test.1-multi-record-inheritance-a",
+    BUILD_ID = "XNP_V2_230_TEST1_MULTI_RECORD_INHERITANCE_A",
+    RELEASE_CHANNEL = "B42_20_TEST_WORKSHOP",
+    GAME_BUILD_TARGET = "42.20.0",
+    STABLE_BASE_VERSION = "2.0.1",
+    STABLE_TARGET_VERSION = "2.2.0",
     STABLE_RELEASE_READY = false,
     WORKSHOP_UPLOAD_STATUS = "PREPARED_NOT_UPLOADED",
     AUTHOR = "世界第一小脑 / XN-PHL",
@@ -67,7 +74,7 @@ local Constants = {
     ICON_TOOLTIP_STATUS = "CN_EN_HOVER_TOOLTIP_MASTER_TOGGLE",
     SPRINT_WALL_STATUS = "NATIVE_TRIP_WINDOW_NOT_FORCED_WALL_CRASH",
     SPRINT_TRIP_CONSEQUENCE = "KILL_MAX_3_REST_KNOCKDOWN_STUN_MINOR_SCRAPE",
-    BODY_STATUS_APPLICATION_METHOD = "DISABLED_AUDIT_ONLY",
+    BODY_STATUS_APPLICATION_METHOD = "RED_CRAFT_POST_COMMIT_BOUNDED_NATIVE_PULSE",
     STATUS_ICON_LAYOUT_METHOD = "FOUR_NEW_0557_POSITION_KEYS_WITH_READ_ONLY_LEGACY_MIGRATION",
     STATUS_ICON_RENDER_METHOD = "NATIVE_MOODLE_ROUND_SHELL_WITH_FOUR_LOCKED_UNTINTED_CENTERS",
     TRAIT_ICON = "media/ui/Traits/trait_xnpdistancerunner.png",
@@ -115,9 +122,11 @@ function Constants.Log(message)
     print(Constants.LOG_PREFIX .. " " .. tostring(message))
 end
 
-if not Core.constants_v2_210_test1_startup_logged then
-    Core.constants_v2_210_test1_startup_logged = true
-    print("[XNP TEST BUILD] BUILD_MARKER=XNP_V2_210_TEST1_IMPROVEMENTS_A constants_loaded=true")
+if not Core.constants_v2_220_test8_startup_logged then
+    Core.constants_v2_220_test8_startup_logged = true
+    print("[XNP STABLE BUILD] VERSION=" .. Constants.VERSION
+        .. " BUILD_MARKER=" .. Constants.BUILD_ID
+        .. " constants_loaded=true")
 end
 
 Core.Constants = Constants
