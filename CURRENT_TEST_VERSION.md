@@ -1,6 +1,6 @@
 # Current Test Version
 
-```text
+`	ext
 CHANNEL=V2_TEST
 TEST_VERSION=2.3.0-test.1
 INTERNAL_VERSION=2.3.0-test.1-multi-record-inheritance-a
@@ -12,6 +12,6 @@ STABLE_VERSION=2.2.0
 STABLE_CHAIN_UPDATED=false
 SOURCE_IS_STABLE=false
 OVERALL_STATUS=PARTIAL
-```
+` 
 
 Static checks pass. Kahlua parser execution, real-game verification, multiplayer verification, and Workshop upload remain pending.
