@@ -1,3 +1,10 @@
+local XNPChannelGuard = require "XNP_PZ_DistanceRunner/XNP_DR_ChannelGuard"
+if type(XNPChannelGuard) == "table"
+    and type(XNPChannelGuard.allowRuntime) == "function"
+    and not XNPChannelGuard.allowRuntime() then
+    return
+end
+
 require "XNP_PZ_DistanceRunner/XNP_DR_Constants"
 require "XNP_PZ_DistanceRunner/XNP_DR_Config"
 require "XNP_PZ_DistanceRunner/XNP_DR_SandboxTuning"
